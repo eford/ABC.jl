@@ -1,19 +1,19 @@
+# using Distributions
+
 immutable GaussianMixtureModelCommonCovar <: Distribution
-    components::Vector # Vector should be able to contain any type of
-                       # distribution with comparable support
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
-	invcovar::Array{Float64,2}
-    aliastable::AliasTable
-    function GaussianMixtureModelCommonCovar(mu::Array{Float64,2}, p::Vector{Float64}, ic::Array{Float64,2})
-        if size(mu,2) != length(p)
+	covar::Array{Float64,2}
+    aliastable::Distributions.AliasTable
+    function GaussianMixtureModelCommonCovar(m::Array{Float64,2}, p::Vector{Float64}, ic::Array{Float64,2})
+        if size(m,2) != length(p)
             error("means and probs must have the same number of elements")
         end
-		if( size(invcovar,1) != size(invcovar,2) )
+		if( size(ic,1) != size(ic,2) )
 		    error("covariance matrix must be square")
 		end 
-		if( size(mu,1) != size(invcovar,1) )
-		    error("means and covar matrix not compatible size")
+		if( size(m,1) != size(ic,1) )
+		    error("means and covar matrix not compatible sizes: ",size(m)," vs ",size(ic) )
 		end
         sump = 0.0
         for i in 1:length(p)
@@ -22,8 +22,8 @@ immutable GaussianMixtureModelCommonCovar <: Distribution
             end
             sump += p[i]
         end
-        table = AliasTable(p)
-        new(mu, p ./ sump, ic, table)
+        table = Distributions.AliasTable(p)
+        new(m, p ./ sump, ic, table)
     end
 end
 
@@ -31,7 +31,7 @@ function mean(d::GaussianMixtureModelCommonCovar)
     np = size(d.mu,2)
 	m = zeros(np)
     for i in 1:length(d.probs)
-        m += squeeze(d.mu[:,i),1) .* d.probs[i]
+        m += vec(d.mu[:,i]) .* d.probs[i]
     end
     return m
 end
@@ -39,13 +39,14 @@ end
 function pdf(d::GaussianMixtureModelCommonCovar, x::Any)
     p = 0.0
     for i in 1:length(d.probs)
-        p += pdf(MvNormalCanon(d.invcov), x .- squeeze(d.mu[:,i],1) ) * d.probs[i]
+        p += Distributions.pdf(Distributions.MvNormal(d.covar), x .- vec(d.mu[:,i]) ) * d.probs[i]
     end
     return p
 end
 
 function rand(d::GaussianMixtureModelCommonCovar)
-    i = rand(d.aliastable)
-    return squeeze(d.mu[:,i],1) .+ rand(MvNormalCanon(d.invcov))
+    i = Distributions.rand(d.aliastable)
+    return  Distributions.rand(Distributions.MvNormal(vec(d.mu[:,i]),d.covar))
 end
+
 

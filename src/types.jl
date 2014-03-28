@@ -1,4 +1,6 @@
-type abc_pmc_plan_type
+abstract abc_plan_type
+
+type abc_pmc_plan_type <: abc_plan_type
    gen_data::Function
    calc_summary_stats::Function
    calc_dist::Function                         
@@ -19,7 +21,7 @@ type abc_pmc_plan_type
      num_part::Integer = 10*length(Distributions.rand(p))^2, num_max_attempt::Integer = 1000, num_max_times::Integer = 100,
      epsilon_init::Float64 = 1.0, init_epsilon_quantile::Float64 = 0.75, epsilon_reduction_factor::Float64 = 0.9, 
      target_epsilon::Float64 = 0.01, tau_factor::Float64 = 2.0)
-     @assert(num_part>=length(rand(p)))
+     @assert(num_part>=length(Distributions.rand(p)))
      @assert(num_max_attempt>=1)
      @assert(num_max_times>0)
      @assert(epsilon_init>0.01)

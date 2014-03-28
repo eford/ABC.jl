@@ -4,7 +4,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       local theta_best
       attempts = num_max_attempt
       for a in 1:num_max_attempt
-         theta_star = Distributions.rand(sampler)
+         theta_star = rand(sampler)
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
          data_star = plan.gen_data(theta_star)
@@ -22,6 +22,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       if dist_best == Inf 
         error("# Failed to generate any acceptable thetas.")
       end
+      # println("gen_theta: d= ",dist_best, " a= ",attempts, " theta= ", theta_best)
       return (theta_best, dist_best, attempts)
 end
 
@@ -50,7 +51,8 @@ function update_abc_pop(plan::abc_pmc_plan_type, ss_true, pop::abc_population_ty
   sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)                                   
      for i in 1:plan.num_part    
        theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)                             
-       if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
+       # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
+       if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
          prior_pdf = Distributions.pdf(plan.prior,theta_star)
@@ -71,13 +73,12 @@ function update_abc_pop(plan::abc_pmc_plan_type, ss_true, pop::abc_population_ty
        end
      end # i / num_parts
    new_pop.weights ./= sum(new_pop.weights)
-   #pop = new_pop
    return new_pop
 end
 
 
 # run the ABC algorithm matching to summary statistics ss_true
-function run_abc(plan::abc_pmc_plan_type, ss_true; print_every::Integer=1 )                                                
+function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1 )                                                
   # Initialize population, drawing from prior
   pop::abc_population_type = init_abc(plan,ss_true)
   #println("pop_init: ",pop)            
@@ -87,8 +88,9 @@ function run_abc(plan::abc_pmc_plan_type, ss_true; print_every::Integer=1 )
   for t in 1:plan.num_max_times 
     new_pop = update_abc_pop(plan, ss_true, pop, epsilon, attempts=attempts)                                                
     pop = copy(new_pop)
-    if t%print_every == 0 
-       println("# t= ",t, " eps= ",epsilon, " median(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " mean(attempts)= ",mean(attempts), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #    
+    if verbose && (t%print_every == 0) 
+       println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #    
+       # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #    
     end
     #if epsilon < plan.target_epsilon  # stop once acheive goal
     if maximum(pop.dist) < plan.target_epsilon  # stop once acheive goal

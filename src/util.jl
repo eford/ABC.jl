@@ -50,7 +50,7 @@ calc_summary_stats_mean_var(x::Array) = ( @inbounds m=mean(x); @inbounds v = var
 calc_dist_max(x::Array{Float64,1},y::Array{Float64,1}) = maximum(abs(x.-y))
 
 # Summary Stats & Distances based on Empirical CDF
-using Distributions
+# using Distributions
 calc_summary_stats_ecdf(x::Array) = EmpiricalUnivariateDistribution(x)
 
 
