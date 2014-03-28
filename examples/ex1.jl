@@ -21,3 +21,26 @@ pop_out = run_abc(abc_plan,ss_true;verbose=true);
 
 
 
+using PyPlot
+
+plt.hist(pop_out.weights*length(pop_out.weights));
+plt.hist(pop_out.dist);
+
+num_param = 2
+num_grid_x = 100
+num_grid_y = 100
+limit = 1.0
+x = linspace(theta_true[1]-limit,theta_true[1]+limit,num_grid_x);
+y = linspace(theta_true[2]-limit,theta_true[2]+limit,num_grid_y);
+z = zeros(Float64,(num_param,length(x),length(y)))
+for i in 1:length(x), j in 1:length(y) 
+    z[1,i,j] = x[i]
+    z[2,i,j] = y[j]
+end
+z = reshape(z,(num_param,length(x)*length(y)))
+zz = [ ABC.pdf(ABC.GaussianMixtureModelCommonCovar(pop_out.theta,pop_out.weights,ABC.cov_weighted(pop_out.theta',pop_out.weights)),vec(z[:,i])) for i in 1:size(z,2) ]
+zz = reshape(zz ,(length(x),length(y)));
+levels = [exp(-0.5*i^2)/sqrt(2pi^num_param) for i in 0:5];
+PyPlot.contour(x,y,zz',levels);
+plot(pop_out.theta[1,:],pop_out.theta[2,:],".");
+
