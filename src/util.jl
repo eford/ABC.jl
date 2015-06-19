@@ -1,5 +1,5 @@
 # If want to use an empty function for normalizing/testing validity of parameters
-noop(x::Array) = return
+noop(x::Array) = return true
 
 # Copy population
 import Base.copy

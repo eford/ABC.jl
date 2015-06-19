@@ -76,12 +76,8 @@ function update_abc_pop(plan::abc_pmc_plan_type, ss_true, pop::abc_population_ty
    return new_pop
 end
 
-
-# run the ABC algorithm matching to summary statistics ss_true
-function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1 )                                                
-  # Initialize population, drawing from prior
-  pop::abc_population_type = init_abc(plan,ss_true)
-  #println("pop_init: ",pop)            
+# run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previosu call)
+function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1 )    
   attempts = zeros(Int64,plan.num_part)
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
@@ -107,6 +103,13 @@ function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_
   end # t / num_times
   #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
   return pop
+end
+
+# run the ABC algorithm matching to summary statistics ss_true
+function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1 )                                          # Initialize population, drawing from prior
+  pop::abc_population_type = init_abc(plan,ss_true)
+  #println("pop_init: ",pop)            
+  run_abc(plan, ss_true, pop; verbose=verbose, print_every=print_every )  # Initialize population, drawing from prior
 end
 
 
