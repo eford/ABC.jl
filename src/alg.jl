@@ -63,7 +63,7 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   for i in 1:plan.num_part
       theta[:,i], dist_theta[i], attempts[i] = generate_theta(plan, plan.prior, ss_true, plan.epsilon_init)
   end
-  weights = fill(1.0//plan.num_part,plan.num_part)
+  weights = fill(1.0/plan.num_part,plan.num_part)
   return abc_population_type(theta,weights,dist_theta)
 end
 
@@ -71,12 +71,17 @@ end
 function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   num_param = length(Distributions.rand(plan.prior))
   num_draw = plan.num_part
-  zip(theta_gen, dist_theta, attempts) = pmap(x->generate_thetas(plan, plan.prior, ss_true, plan.epsilon_init), [1:plan.num_part])
+  pmap_results = pmap(x->generate_theta(plan, plan.prior, ss_true, plan.epsilon_init), [1:plan.num_part])
+  theta = Array(Float64,(num_param,plan.num_part))
+  dist_theta = Array(Float64,plan.num_part)
+  attempts = Array(Int64,plan.num_part)
   for i in 1:plan.num_part
-      theta[:,i]  = theta_gen[i]
+      theta[:,i]  = pmap_results[i][1]
+      dist_theta[i]  = pmap_results[i][2]
+      attempts[i]  = pmap_results[i][3]
   end
 
-  weights = fill(1.0//plan.num_part,plan.num_part)
+  weights = fill(1.0/plan.num_part,plan.num_part)
   return abc_population_type(theta,weights,dist_theta)
 end
 
@@ -107,7 +112,7 @@ function init_abc_parallel_custom(plan::abc_pmc_plan_type, ss_true)
   for j in 1:nw
     theta[:,a[j]:b[j]], dist_theta[a[j]:b[j]], attempts[a[j]:b[j]] = fetch(job[j])
   end
-  weights = fill(1.0//plan.num_part,plan.num_part)
+  weights = fill(1.0/plan.num_part,plan.num_part)
   return abc_population_type(theta,weights,dist_theta)
 end
 
@@ -121,16 +126,19 @@ function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_popu
   tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
   sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)
 
-  zip(theta_star, dist_theta_star, attempts) = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), [1:plan.num_part])
+  #zip(theta_star, dist_theta_star, attempts)
+  pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), [1:plan.num_part])
      for i in 1:plan.num_part
        #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
-       if dist_theta_star[i] < epsilon # replace theta with new set of parameters and update weight
-         @inbounds new_pop.dist[i] = dist_theta_star[i]
-         @inbounds new_pop.theta[:,i] = theta_star[i]
-         prior_pdf = Distributions.pdf(plan.prior,theta_star[i])
+       theta_star = pmap_results[i][1]
+       dist_theta_star =  pmap_results[i][2]
+       if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
+         @inbounds new_pop.theta[:,i] = theta_star
+         @inbounds new_pop.dist[i] = dist_theta_star
+         prior_pdf = Distributions.pdf(plan.prior,theta_star)
          # sampler_pdf calculation must match distribution used to update particle
-         sampler_pdf = pdf(sampler, theta_star[i] )
+         sampler_pdf = pdf(sampler, theta_star )
          @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
          @inbounds new_pop.repeats[i] = 0
        else  # failed to generate a closer set of parameters, so...
@@ -139,8 +147,8 @@ function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_popu
          #new_ss = plan.calc_summary_stats(new_data)
          #@inbounds new_pop.dist[i] = plan.calc_dist(ss_true,new_ss)
          # ... just keep last value for this time, and mark it as a repeat
-         @inbounds new_pop.dist[i] = pop.dist[i]
          @inbounds new_pop.theta[:,i] = pop.theta[:,i]
+         @inbounds new_pop.dist[i] = pop.dist[i]
          @inbounds new_pop.weights[i] = pop.weights[i]
          @inbounds new_pop.repeats[i] += 1
        end
