@@ -14,7 +14,7 @@ theta_true = [0.0, 1.0]
 param_prior = Distributions.MvNormal(theta_true,ones(length(theta_true)))
 
 abc_plan = abc_pmc_plan_type(gen_data_normal,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; 
-                             target_epsilon=0.01,target_samples=100,is_valid=is_valid_theta2_pos,num_max_attempt=10000);
+                             target_epsilon=0.01,is_valid=is_valid_theta2_pos,num_max_attempt=10000);
 
 num_param = 2
 # Generate "observed" data 
