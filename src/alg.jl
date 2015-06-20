@@ -1,3 +1,5 @@
+#include("alg_parallel_custom.jl")   # Demo of using @spawn and fetch to reduce memory usage
+
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
       @assert(epsilon>0.0)
       dist_best = Inf
@@ -26,26 +28,12 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       return (theta_best, dist_best, attempts)
 end
 
-# Generate an array of thetas (useful for parallelizing)
-function generate_thetas(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64, num_to_generate::Integer; num_max_attempt = plan.num_max_attempt)
-    @assert(epsilon>0.0)
-    ex_sample = rand(sampler)
-    num_param = length(ex_sample)
-    thetas = Array(eltype(ex_sample),num_param,num_to_generate)
-    dists = Array(Float64, num_to_generate)  # Warning should make aware of distance return type
-    attempts = Array(Int64,  num_to_generate)
-    for i in 1:num_to_generate
-      thetas[:,i], dists[i], attempts[i] = generate_theta(plan, sampler, ss_true, epsilon, num_max_attempt = num_max_attempt )
-    end
-    return (thetas, dists, attempts)
-end
-
 # Generate initial abc population from prior, aiming for d(ss,ss_true)<epsilon
-function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = false)
+function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = plan.in_parallel)
   if in_parallel
    nw = nworkers()
    @assert (nw > 1)
-   @assert (plan.num_part > 2*nw)
+   @assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
    return init_abc_parallel_map(plan,ss_true)
   else
    return init_abc_serial(plan,ss_true)
@@ -67,11 +55,12 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   return abc_population_type(theta,weights,dist_theta)
 end
 
-### WARNING PARALLEL CODE UNTESTED
 function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
-  num_param = length(Distributions.rand(plan.prior))
-  num_draw = plan.num_part
+  #num_param = length(Distributions.rand(plan.prior))
   pmap_results = pmap(x->generate_theta(plan, plan.prior, ss_true, plan.epsilon_init), [1:plan.num_part])
+  @assert( length(pmap_results) >= 1)
+  @assert( length(pmap_results[1]) >= 1)
+  num_param = length(pmap_results[1][1])
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = Array(Int64,plan.num_part)
@@ -84,38 +73,6 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   weights = fill(1.0/plan.num_part,plan.num_part)
   return abc_population_type(theta,weights,dist_theta)
 end
-
-function init_abc_parallel_custom(plan::abc_pmc_plan_type, ss_true)
-  num_param = length(Distributions.rand(plan.prior))
-  num_draw = plan.num_part
-  nw = nworkers()
-
-  job = Array(RemoteRef, nw)
-  a = [1:ifloor(num_draw/nw):num_draw][1:nw]
-  b = Array(Int64,nw)
-  for i in 1:nw-1
-     b[i] = a[i+1]-1
-  end
-  b[end] = num_draw
-
-  for j in 1:nw
-    #println("# Starting jobs ",j," with entries ", a[j], " to ", b[j])
-    # Draw initial set of theta's from prior (either with dist<epsilon or best of num_max_attempts)
-    job[j] = @spawn generate_thetas(plan, plan.prior, ss_true, plan.epsilon_init, b[j]-a[j]+1)  # TODO NEED TO MAKE THIS RETURN ARRAYS for i in a[j]:b[j] ]
-  end
-
-  # Allocate arrays for results on master
-  theta = Array(Float64,(num_param,plan.num_part))
-  dist_theta = Array(Float64, plan.num_part)
-  attempts = Array(Int64, plan.num_part)
-  # Retreive results
-  for j in 1:nw
-    theta[:,a[j]:b[j]], dist_theta[a[j]:b[j]], attempts[a[j]:b[j]] = fetch(job[j])
-  end
-  weights = fill(1.0/plan.num_part,plan.num_part)
-  return abc_population_type(theta,weights,dist_theta)
-end
-
 
 # Update the abc population once
 function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
@@ -159,7 +116,7 @@ end
 
 
 # Update the abc population once
-function update_abc_pop(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
+function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
   # define sampler to be used
@@ -194,7 +151,7 @@ function update_abc_pop(plan::abc_pmc_plan_type, ss_true, pop::abc_population_ty
 end
 
 # run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previosu call)
-function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = false )
+function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = plan.in_parallel )
   attempts = zeros(Int64,plan.num_part)
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
@@ -203,7 +160,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     if in_parallel
       new_pop = update_abc_pop_parallel(plan, ss_true, pop, epsilon, attempts=attempts)
     else
-      new_pop = update_abc_pop(plan, ss_true, pop, epsilon, attempts=attempts)
+      new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
     end
     pop = copy(new_pop)
     if verbose && (t%print_every == 0)
@@ -228,7 +185,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
 end
 
 # run the ABC algorithm matching to summary statistics ss_true
-function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = false )                                          # Initialize population, drawing from prior
+function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool =  plan.in_parallel )                                          # Initialize population, drawing from prior
   pop::abc_population_type = init_abc(plan,ss_true, in_parallel=in_parallel)
   #println("pop_init: ",pop)
   run_abc(plan, ss_true, pop; verbose=verbose, print_every=print_every, in_parallel=in_parallel )  # Initialize population, drawing from prior
