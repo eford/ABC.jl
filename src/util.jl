@@ -30,7 +30,7 @@ end
 # Compute Effective Sample Size for array of weights
 function ess(w::Array{Float64,1})
   sumw = sum(w)
-  sumw2 = sum (w.*w)
+  sumw2 = sum(w.*w)
   return sumw*sumw/sumw2
 end
 
@@ -39,7 +39,7 @@ end
 function ess(w::Array{Float64,1}, repeat::Array{Int64,1} )
   @assert(length(w)==length(repeat))
   sumw = sum(w[find(x->x==0,repeat)])
-  sumw2 = sum (w[find(x->x==0,repeat)].^2)
+  sumw2 = sum(w[find(x->x==0,repeat)].^2)
   return sumw*sumw/sumw2
 end
 
