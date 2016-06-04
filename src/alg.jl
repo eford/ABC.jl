@@ -1,3 +1,7 @@
+using PyCall
+unshift!(PyVector(pyimport("sys")["path"]), "")
+@pyimport nearest_correlation
+
 #include("alg_parallel_custom.jl")   # Demo of using @spawn and fetch to reduce memory usage
 
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
@@ -81,8 +85,9 @@ function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_popu
   # define sampler to be used
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  tau = nearest_correlation.nearcorr(tau)
   sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)
-
+  
   #zip(theta_star, dist_theta_star, attempts)
   pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), [1:plan.num_part])
      for i in 1:plan.num_part
@@ -122,7 +127,9 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
   # define sampler to be used
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  tau = nearest_correlation.nearcorr(tau)
   sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)
+
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
