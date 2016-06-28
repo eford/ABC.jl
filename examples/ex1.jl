@@ -23,15 +23,15 @@ pop_out = run_abc(abc_plan,ss_true;verbose=true);
 
 using PyPlot
 
-plt.hist(pop_out.weights*length(pop_out.weights));
-plt.hist(pop_out.dist);
+hist(pop_out.weights*length(pop_out.weights));
+hist(pop_out.dist);
 
 num_param = 2
 num_grid_x = 100
 num_grid_y = 100
 limit = 1.0
-x = linspace(theta_true[1]-limit,theta_true[1]+limit,num_grid_x);
-y = linspace(theta_true[2]-limit,theta_true[2]+limit,num_grid_y);
+x = collect(linspace(theta_true[1]-limit,theta_true[1]+limit,num_grid_x));
+y = collect(linspace(theta_true[2]-limit,theta_true[2]+limit,num_grid_y));
 z = zeros(Float64,(num_param,length(x),length(y)))
 for i in 1:length(x), j in 1:length(y) 
     z[1,i,j] = x[i]
