@@ -128,7 +128,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   tau = plan.tau_factor*diag(cov_weighted(pop.theta'.-theta_mean,pop.weights))  # scaled, weighted covar for parameters
   # tau = nearest_correlation.nearcorr(tau)
-  println("Original pop weights = ", pop.weights)
+  #println("Original pop weights = ", pop.weights)
   sampler = GaussianMixtureModelCommonCovarDiagonal(pop.theta,pop.weights,tau)
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
