@@ -21,6 +21,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
             theta_best = copy(theta_star)
          end
          if(dist_best < epsilon)
+             println("True #: ", ss_true.stat["planets detected"], " / Current expected # : ", ss_star.stat["expected planets detected"], " / Current distance: ", dist_best, " / Current rate: ", exp(theta_best[1]))
             attempts = a
             break
          end
@@ -161,7 +162,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
        end
      end # i / num_parts
    new_pop.weights ./= sum(new_pop.weights)
-   println("New pop weights = ", new_pop.weights)
+   #println("New pop weights = ", new_pop.weights)
    return new_pop
 end
 
