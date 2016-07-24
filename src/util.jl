@@ -9,7 +9,6 @@ copy(x::abc_population_type) = abc_population_type(copy(x.theta),copy(x.weights)
 function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   @assert(size(x,1)==length(w) )
   sumw = sum(w)
-  @assert( sumw > 0. )
   if(sumw!= 1.0) 
      w /= sum(w)
      sumw = 1.0
@@ -26,27 +25,6 @@ function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
     end
   end
   covar
-end
-
-function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Float64 = 1.0e-6)
-  @assert(size(A,1)==size(A,2))
-  B = copy(A)
-  itt = 1
-  while !isposdef(B)
-	eigvalB,eigvecB = eig(B)
-        pos_eigval_idx = eigvalB.>0
-	neweigval = (epsabs == 0.0) ? epsfac*minimum(eigvalB[pos_eigval_idx]) : epsabs
-	eigvalB[!pos_eigval_idx] = neweigval
-	B = eigvecB *diagm(eigvalB)*eigvecB'
-	println(itt,": ",B)
-        #cholB = chol(B)
-	itt +=1
-	if itt>size(A,1) 
-	  error("There's a problem in make_matrix_pd.\n")
-  	  break 
-	end
-  end
-  return B
 end
 
 # Compute Effective Sample Size for array of weights
@@ -88,8 +66,5 @@ function calc_dist_ks(x::EmpiricalUnivariateDistribution, y::EmpiricalUnivariate
    end   
    maxd
 end
-
-
-
 
 
