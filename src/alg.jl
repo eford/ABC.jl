@@ -171,6 +171,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   attempts = zeros(Int64,plan.num_part)
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
+  eps_diff_count = 0
   for t in 1:plan.num_max_times
     local new_pop
     if in_parallel
@@ -181,6 +182,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     pop = copy(new_pop)
     if verbose && (t%print_every == 0)
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
+       println("Mean(theta)= ", mean(exp(pop.theta), 2), " Stand. Dev.(theta)= ", std(exp(pop.theta), 2))
        # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
     end
     #if epsilon < plan.target_epsilon  # stop once acheive goal
@@ -192,8 +194,16 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
       println("# Halting due to ", sum(pop.repeats), " repeats.")
       break
     end
+    eps_old = epsilon
     if maximum(attempts)<0.75*plan.num_max_attempt
       epsilon = minimum([maximum(pop.dist),epsilon * plan.epsilon_reduction_factor])
+    end
+    if ((abs(eps_old-epsilon)/epsilon) < 1.0e-5)
+      eps_diff_count += 1
+    end
+    if eps_diff_count > 4
+      println("# Halting due to epsilon not improving significantly for 5 consecutive generations.")
+      break
     end
   end # t / num_times
   #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
