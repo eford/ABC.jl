@@ -5,7 +5,7 @@
 #include("alg_parallel_custom.jl")   # Demo of using @spawn and fetch to reduce memory usage
 
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
-      @assert(epsilon>0.0)
+      @assert(epsilon>=0.0)
       dist_best = Inf
       local theta_best
       attempts = num_max_attempt
