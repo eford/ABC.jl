@@ -172,6 +172,9 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
   eps_diff_count = 0
+  mean_arr = []
+  std_arr = []
+  eps_arr = []
   for t in 1:plan.num_max_times
     local new_pop
     if in_parallel
@@ -180,6 +183,9 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
       new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
     end
     pop = copy(new_pop)
+    push!(mean_arr, mean(exp(pop.theta), 2)[1])
+    push!(std_arr, std(exp(pop.theta), 2)[1])
+    push!(eps_arr, epsilon)
     if verbose && (t%print_every == 0)
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
        println("Mean(theta)= ", mean(exp(pop.theta), 2), " Stand. Dev.(theta)= ", std(exp(pop.theta), 2))
@@ -207,6 +213,9 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     end
   end # t / num_times
   #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
+  println("Epsilon history = ", eps_arr)
+  println("Mean history = ", mean_arr)
+  println("Std Dev. history = ", std_arr)
   return pop
 end
 
