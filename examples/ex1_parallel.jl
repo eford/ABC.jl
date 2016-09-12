@@ -1,5 +1,5 @@
-using ABC
-using Distributions
+@everywhere using ABC
+@everywhere using Distributions
 
 # Set Prior for Population Parameters
 theta_true = [0.0, 1.0]
@@ -16,7 +16,7 @@ normalize_theta2_pos(theta::Array) =  theta[2] = abs(theta[2])
 is_valid_theta2_pos(theta::Array) =  theta[2]>0.0 ? true : false
 
 # Tell ABC what it needs to know for a simulation
-abc_plan = abc_pmc_plan_type(gen_data_normal,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; is_valid=is_valid_theta2_pos,num_max_attempt=10000);
+abc_plan = abc_pmc_plan_type(gen_data_normal,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; is_valid=is_valid_theta2_pos,num_max_attempt=10000, in_parallel=true);
 
 # Generate "true/observed data" and summary statistics
 data_true = abc_plan.gen_data(theta_true)

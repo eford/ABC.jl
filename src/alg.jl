@@ -57,7 +57,7 @@ end
 
 function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   #num_param = length(Distributions.rand(plan.prior))
-  pmap_results = pmap(x->generate_theta(plan, plan.prior, ss_true, plan.epsilon_init), [1:plan.num_part])
+  pmap_results = pmap(x->generate_theta(plan, plan.prior, ss_true, plan.epsilon_init), collect(1:plan.num_part) )
   @assert( length(pmap_results) >= 1)
   @assert( length(pmap_results[1]) >= 1)
   num_param = length(pmap_results[1][1])
