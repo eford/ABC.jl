@@ -51,11 +51,11 @@ end
 
 function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Float64 = 1.0e-6)
   @assert(size(A,1)==size(A,2))
-  B = copy(A)
+  B = 0.5*(A+A')
   itt = 1
   while !isposdef(B)
 	eigvalB,eigvecB = eig(B)
-        pos_eigval_idx = eigvalB.>0
+        pos_eigval_idx = eigvalB.>0.0
 	neweigval = (epsabs == 0.0) ? epsfac*minimum(eigvalB[pos_eigval_idx]) : epsabs
 	eigvalB[!pos_eigval_idx] = neweigval
 	B = eigvecB *diagm(eigvalB)*eigvecB'
