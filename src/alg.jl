@@ -79,8 +79,8 @@ function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_popu
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
   # define sampler to be used
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
-  tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
+  tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean',pop.weights)  # scaled, weighted covar for parameters
   sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)
 
   #zip(theta_star, dist_theta_star, attempts)
@@ -120,11 +120,11 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
   # define sampler to be used
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters  # TODO: WARNING:  WHY NOT A VECTOR?!?
+  theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
   println("theta_mean = ", theta_mean)
   println("pop.theta = ", pop.theta)
   println("pop.weights = ", pop.weights)
-  rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  rawtau = cov_weighted(pop.theta'.-theta_mean',pop.weights)  # scaled, weighted covar for parameters
   tau = plan.tau_factor*make_matrix_pd(rawtau)
   #tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
   println("tau = ", tau)
