@@ -3,6 +3,7 @@ module ABC
 # package code goes here
 
 using Distributions
+using PDMats
 
 export
   # types 

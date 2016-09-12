@@ -74,16 +74,39 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   return abc_population_type(theta,weights,dist_theta)
 end
 
+function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false)
+  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
+  rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  tau = tau_factor*make_matrix_pd(rawtau)
+  if verbose
+    println("theta_mean = ", theta_mean)
+    println("pop.theta = ", pop.theta)
+    println("pop.weights = ", pop.weights)
+    println("tau = ", tau)
+  end
+  covar = PDMat(tau)
+  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+end
+
+function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false)
+  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
+  tau = tau_factor*var_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  if verbose
+    println("theta_mean = ", theta_mean)
+    println("pop.theta = ", pop.theta)
+    println("pop.weights = ", pop.weights)
+    println("tau = ", tau)
+  end
+  covar = PDiagMat(tau)
+  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+end
+
 # Update the abc population once
 function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
-  # define sampler to be used
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
-  tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)
+  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
 
-  #zip(theta_star, dist_theta_star, attempts)
   pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), [1:plan.num_part])
      for i in 1:plan.num_part
        #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
@@ -119,16 +142,8 @@ end
 function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
-  # define sampler to be used
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters  # TODO: WARNING:  WHY NOT A VECTOR?!?
-  println("theta_mean = ", theta_mean)
-  println("pop.theta = ", pop.theta)
-  println("pop.weights = ", pop.weights)
-  rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  tau = plan.tau_factor*make_matrix_pd(rawtau)
-  #tau = plan.tau_factor*cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  println("tau = ", tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,tau)
+  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
+
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight

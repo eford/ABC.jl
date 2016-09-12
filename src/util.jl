@@ -28,6 +28,27 @@ function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   covar
 end
 
+# Compute weighted variances of sample (from origin) 
+function var_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
+  @assert(size(x,1)==length(w) )
+  sumw = sum(w)
+  @assert( sumw > 0. )
+  if(sumw!= 1.0) 
+     w /= sum(w)
+     sumw = 1.0
+  end
+  sumw2 = sum(w.*w)  
+  xbar = [ sum(x[:,i].*w) for i in 1:size(x,2) ]  
+  covar = zeros(size(x,2))
+    for j in 1:size(x,2)
+        for i in 1:size(x,1)
+            @inbounds covar[j] += (x[i,j]-xbar[j])*(x[i,j]-xbar[k]) *w[i]
+        end
+    @inbounds covar[j] *= sumw/(sumw*sumw-sumw2)
+    end
+  covar
+end
+
 function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Float64 = 1.0e-6)
   @assert(size(A,1)==size(A,2))
   B = copy(A)
