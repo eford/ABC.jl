@@ -2,8 +2,10 @@ module ABC
 
 # package code goes here
 
-@everywhere using Distributions
-@everywhere using PDMats
+using Distributions
+using PDMats
+#@everywhere using Distributions
+#@everywhere using PDMats
 
 export
   # types 
