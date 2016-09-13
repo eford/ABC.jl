@@ -2,8 +2,8 @@ module ABC
 
 # package code goes here
 
-using Distributions
-using PDMats
+@everywhere using Distributions
+@everywhere using PDMats
 
 export
   # types 
@@ -31,3 +31,4 @@ include("util.jl")
 include("alg.jl")
 
 end # module
+
