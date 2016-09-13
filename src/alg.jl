@@ -34,7 +34,8 @@ function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = plan.in_
    nw = nworkers()
    @assert (nw > 1)
    @assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
-   return init_abc_parallel_map(plan,ss_true)
+   #return init_abc_parallel_map(plan,ss_true)
+   return init_abc_distributed_map(plan,ss_true)
   else
    return init_abc_serial(plan,ss_true)
   end
@@ -51,6 +52,27 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   for i in 1:plan.num_part
       theta[:,i], dist_theta[i], attempts[i] = generate_theta(plan, plan.prior, ss_true, plan.epsilon_init)
   end
+  weights = fill(1.0/plan.num_part,plan.num_part)
+  return abc_population_type(theta,weights,dist_theta)
+end
+
+function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
+  #num_param = length(Distributions.rand(plan.prior))
+  num_param = length(plan.prior)
+  darr_silly = dzeros(plan.num_part)
+  map_results = map(x->generate_theta(plan, plan.prior, ss_true, plan.epsilon_init), darr_silly )
+  @assert( length(map_results) >= 1)
+  @assert( length(map_results[1]) >= 1)
+  #num_param = length(map_results[1][1])
+  theta = Array(Float64,(num_param,plan.num_part))
+  dist_theta = Array(Float64,plan.num_part)
+  attempts = Array(Int64,plan.num_part)
+  for i in 1:plan.num_part
+      theta[:,i]  = map_results[i][1]
+      dist_theta[i]  = map_results[i][2]
+      attempts[i]  = map_results[i][3]
+  end
+
   weights = fill(1.0/plan.num_part,plan.num_part)
   return abc_population_type(theta,weights,dist_theta)
 end

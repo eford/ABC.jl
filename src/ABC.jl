@@ -4,6 +4,7 @@ module ABC
 
 @everywhere using Distributions
 @everywhere using PDMats
+@everywhere using DistributedArrays
 
 export
   # types 
