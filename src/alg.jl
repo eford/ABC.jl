@@ -129,7 +129,7 @@ function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_popu
   new_pop = copy(pop)
   sampler = plan.make_proposal_dist(pop, plan.tau_factor)
 
-  pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), [1:plan.num_part])
+  pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), collect(1:plan.num_part))
      for i in 1:plan.num_part
        #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight

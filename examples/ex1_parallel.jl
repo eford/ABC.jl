@@ -1,3 +1,12 @@
+if length(ARGS) >= 1
+  nw = parse(ARGS[1])
+  if nw >1
+     addprocs(nw)
+  end
+else 
+  addprocs()
+end
+
 @everywhere using Distributions
 @everywhere using ABC
 
@@ -16,7 +25,8 @@
 @everywhere is_valid_theta2_pos(theta::Array) =  theta[2]>0.0 ? true : false
 
 # Tell ABC what it needs to know for a simulation
-@everywhere abc_plan = ABC.abc_pmc_plan_type(gen_data_normal,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; is_valid=is_valid_theta2_pos,num_max_attempt=10000, in_parallel=true);
+@everywhere in_parallel = length(workers()) > 1 ? true : false
+@everywhere abc_plan = ABC.abc_pmc_plan_type(gen_data_normal,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; is_valid=is_valid_theta2_pos,num_max_attempt=10000, in_parallel=in_parallel);
 
 # Generate "true/observed data" and summary statistics
 @everywhere data_true = abc_plan.gen_data(theta_true)
@@ -24,7 +34,7 @@
 #println("theta= ",theta_true," ss= ",ss_true, " d= ", 0.)
 
 # Run ABC simulation
-pop_out = run_abc(abc_plan,ss_true;verbose=true);
+@time pop_out = run_abc(abc_plan,ss_true;verbose=true);
 
 
 #= 
