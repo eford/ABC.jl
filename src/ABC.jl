@@ -2,9 +2,9 @@ module ABC
 
 # package code goes here
 
-@everywhere using Distributions
-@everywhere using PDMats
-@everywhere using DistributedArrays
+using Distributions
+using PDMats
+using DistributedArrays
 
 export
   # types 

@@ -33,7 +33,7 @@ function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = plan.in_
   if in_parallel
    nw = nworkers()
    @assert (nw > 1)
-   @assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
+   #@assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
    #return init_abc_parallel_map(plan,ss_true)
    return init_abc_distributed_map(plan,ss_true)
   else
@@ -124,7 +124,7 @@ function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_fa
 end
 
 # Update the abc population once
-function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
+function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
   sampler = plan.make_proposal_dist(pop, plan.tau_factor)
@@ -135,6 +135,43 @@ function update_abc_pop_parallel(plan::abc_pmc_plan_type, ss_true, pop::abc_popu
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
        theta_star = pmap_results[i][1]
        dist_theta_star =  pmap_results[i][2]
+       if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
+         @inbounds new_pop.theta[:,i] = theta_star
+         @inbounds new_pop.dist[i] = dist_theta_star
+         prior_pdf = Distributions.pdf(plan.prior,theta_star)
+         # sampler_pdf calculation must match distribution used to update particle
+         sampler_pdf = pdf(sampler, theta_star )
+         @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
+         @inbounds new_pop.repeats[i] = 0
+       else  # failed to generate a closer set of parameters, so...
+         # ... generate new data set with existing parameters
+         #new_data = plan.gen_data(theta_star)
+         #new_ss = plan.calc_summary_stats(new_data)
+         #@inbounds new_pop.dist[i] = plan.calc_dist(ss_true,new_ss)
+         # ... just keep last value for this time, and mark it as a repeat
+         @inbounds new_pop.theta[:,i] = pop.theta[:,i]
+         @inbounds new_pop.dist[i] = pop.dist[i]
+         @inbounds new_pop.weights[i] = pop.weights[i]
+         @inbounds new_pop.repeats[i] += 1
+       end
+     end # i / num_parts
+   new_pop.weights ./= sum(new_pop.weights)
+   return new_pop
+end
+
+function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
+                        attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
+  new_pop = copy(pop)
+  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
+
+  darr_silly = dzeros(plan.num_part)
+  dmap_results = map(x->generate_theta(plan, sampler, ss_true, epsilon), darr_silly)
+  map_results = collect(dmap_results)
+     for i in 1:plan.num_part
+       #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
+       # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
+       theta_star = map_results[i][1]
+       dist_theta_star =  map_results[i][2]
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
@@ -201,7 +238,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   for t in 1:plan.num_max_times
     local new_pop
     if in_parallel
-      new_pop = update_abc_pop_parallel(plan, ss_true, pop, epsilon, attempts=attempts)
+      new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
     else
       new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
     end
