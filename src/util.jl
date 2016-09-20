@@ -27,6 +27,48 @@ function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   covar
 end
 
+# Compute weighted variances of sample (from origin) 
+function var_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
+  @assert(size(x,1)==length(w) )
+  sumw = sum(w)
+  @assert( sumw > 0. )
+  if(sumw!= 1.0) 
+     w /= sum(w)
+     sumw = 1.0
+  end
+  sumw2 = sum(w.*w)  
+  xbar = [ sum(x[:,i].*w) for i in 1:size(x,2) ]  
+  covar = zeros(size(x,2))
+    for j in 1:size(x,2)
+        for i in 1:size(x,1)
+            @inbounds covar[j] += (x[i,j]-xbar[j])*(x[i,j]-xbar[k]) *w[i]
+        end
+    @inbounds covar[j] *= sumw/(sumw*sumw-sumw2)
+    end
+  covar
+end
+
+function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Float64 = 1.0e-6)
+  @assert(size(A,1)==size(A,2))
+  B = 0.5*(A+A')
+  itt = 1
+  while !isposdef(B)
+	eigvalB,eigvecB = eig(B)
+        pos_eigval_idx = eigvalB.>0.0
+	neweigval = (epsabs == 0.0) ? epsfac*minimum(eigvalB[pos_eigval_idx]) : epsabs
+	eigvalB[!pos_eigval_idx] = neweigval
+	B = eigvecB *diagm(eigvalB)*eigvecB'
+	println(itt,": ",B)
+        #cholB = chol(B)
+	itt +=1
+	if itt>size(A,1) 
+	  error("There's a problem in make_matrix_pd.\n")
+  	  break 
+	end
+  end
+  return B
+end
+
 # Compute Effective Sample Size for array of weights
 function ess(w::Array{Float64,1})
   sumw = sum(w)

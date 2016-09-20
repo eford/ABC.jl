@@ -3,6 +3,8 @@ module ABC
 # package code goes here
 
 using Distributions
+using PDMats
+using DistributedArrays
 
 export
   # types 
@@ -31,3 +33,4 @@ include("util.jl")
 include("alg.jl")
 
 end # module
+

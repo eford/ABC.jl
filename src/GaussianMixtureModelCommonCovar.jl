@@ -1,11 +1,13 @@
-# using Distributions
+if !isdefined(:Distributions) using Distributions end
+if !isdefined(:PDMats)        using PDMats end
 
 immutable GaussianMixtureModelCommonCovar <: Distribution
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
-	covar::Array{Float64,2}
-    aliastable::Distributions.AliasTable
-    function GaussianMixtureModelCommonCovar(m::Array{Float64,2}, p::Vector{Float64}, ic::Array{Float64,2})
+        covar::AbstractPDMat
+        aliastable::Distributions.AliasTable
+
+    function GaussianMixtureModelCommonCovar(m::Array{Float64,2}, p::Vector{Float64}, ic::AbstractPDMat)
         if size(m,2) != length(p)
             error("means and probs must have the same number of elements")
         end
