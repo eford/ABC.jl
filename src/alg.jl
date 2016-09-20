@@ -123,6 +123,33 @@ function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_fa
   sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
 end
 
+function make_proposal_dist_gaussian_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1))))
+  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
+  rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  tau = tau_factor*make_matrix_pd(rawtau)
+  if verbose
+    println("theta_mean = ", theta_mean)
+    println("pop.theta = ", pop.theta)
+    println("pop.weights = ", pop.weights)
+    println("tau = ", tau)
+  end
+  covar = PDMat(tau[param_active])
+  sampler = GaussianMixtureModelCommonCovar(pop.theta[param_active],pop.weights,covar,param_active)
+end
+
+function make_proposal_dist_gaussian_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1))))
+  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
+  tau = tau_factor*var_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
+  if verbose
+    println("theta_mean = ", theta_mean)
+    println("pop.theta = ", pop.theta)
+    println("pop.weights = ", pop.weights)
+    println("tau = ", tau)
+  end
+  covar = PDiagMat(tau[param_active])
+  sampler = GaussianMixtureModelCommonCovar(pop.theta[param_active],pop.weights,covar,param_active)
+end
+
 # Update the abc population once
 function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
