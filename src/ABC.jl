@@ -21,6 +21,7 @@ export
   run_abc
 
 
+import StatsBase.sample
 import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
 

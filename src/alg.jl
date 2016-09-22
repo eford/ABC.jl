@@ -150,6 +150,16 @@ function make_proposal_dist_gaussian_subset_diag_covar(pop::abc_population_type,
   sampler = GaussianMixtureModelCommonCovarSubset(pop.theta,pop.weights,covar,param_active)
 end
 
+function make_proposal_dist_gaussian_rand_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
+  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+  make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active ) 
+end
+
+function make_proposal_dist_gaussian_rand_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
+  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+  make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active ) 
+end
+
 # Update the abc population once
 function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
@@ -229,7 +239,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
   
-  sampler = plan.make_proposal_dist(pop, plan.tau_factor, param_active = plan.param_active)
+  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
 
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
