@@ -41,7 +41,7 @@ function var_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   covar = zeros(size(x,2))
     for j in 1:size(x,2)
         for i in 1:size(x,1)
-            @inbounds covar[j] += (x[i,j]-xbar[j])*(x[i,j]-xbar[k]) *w[i]
+            @inbounds covar[j] += (x[i,j]-xbar[j])*(x[i,j]-xbar[j]) *w[i]
         end
     @inbounds covar[j] *= sumw/(sumw*sumw-sumw2)
     end
