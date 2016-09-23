@@ -26,7 +26,7 @@ type abc_pmc_plan_type <: abc_plan_type
      num_part::Integer = 10*length(Distributions.rand(p))^2, num_max_attempt::Integer = 1000, num_max_times::Integer = 100,
      epsilon_init::Float64 = 1.0, init_epsilon_quantile::Float64 = 0.75, epsilon_reduction_factor::Float64 = 0.9, 
      target_epsilon::Float64 = 0.01, tau_factor::Float64 = 2.0, 
-     save_summary_stats::Bool = false, in_parallel::Bool = false)
+     save_summary_stats::Bool = true, in_parallel::Bool = false)
      @assert(num_part>=length(Distributions.rand(p)))
      @assert(num_max_attempt>=1)
      @assert(num_max_times>0)
@@ -39,20 +39,32 @@ type abc_pmc_plan_type <: abc_plan_type
    end
 end
 
+type abc_summary_stats_log_type   # Not implemented yet
+   theta::Array{Array{Float64,1},1}
+   ss::Array{Array{Float64},1}
+
+   function abc_summary_stats_log_type(t::Array{Array{Float64,1},1}, ss::Array{Array{Float64,1},1})
+      @assert length(t) == length(ss)
+      new( t, ss )
+   end
+end
+
+function abc_summary_stats_log_type()
+   abc_summary_stats_log_type( Array(Array{Float64,1},0), Array(Array{Float64,1},0) )
+end
+
 
 type abc_population_type
    theta::Array{Float64,2}
    weights::Array{Float64,1}
    dist::Array{Float64,1}
+   log::abc_summary_stats_log_type
    repeats::Array{Int64,1}
-   function abc_population_type(t::Array{Float64,2}, w::Array{Float64,1}, d::Array{Float64,1}, r::Array{Int64,1} = zeros(Int64,length(w)) )
-      @assert(length(w)==length(d)==size(t,2)==length(r))
-      new(t,w,d,r)                                  
-   end                                    
-end
 
-type abc_summary_stats_log_type   # Not implemented yet
-   log::Array{Any,1}
+   function abc_population_type(t::Array{Float64,2}, w::Array{Float64,1}, d::Array{Float64,1}, l::abc_summary_stats_log_type = abc_summary_stats_log_type(), repeats::Array{Int64,1} = zeros(Int64,length(w)) ) 
+      @assert(length(w)==length(d)==size(t,2)==length(repeats))
+      new(t,w,d,l,repeats)
+   end                                    
 end
 
 
