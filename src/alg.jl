@@ -11,6 +11,9 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       attempts = num_max_attempt
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
+	 if !isa(theta_star, Array)
+	   theta_star = fill(theta_star, length(plan.prior))
+         end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
          data_star = plan.gen_data(theta_star)
@@ -243,7 +246,6 @@ end
 function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = copy(pop)
-  
   sampler = plan.make_proposal_dist(pop, plan.tau_factor)
 
      for i in 1:plan.num_part
@@ -260,6 +262,9 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
          prior_pdf = Distributions.pdf(plan.prior,theta_star)
+	 if isa(prior_pdf, Array)
+           prior_pdf = prior_pdf[1]
+         end
          # sampler_pdf calculation must match distribution used to update particle
          sampler_pdf = pdf(sampler, theta_star )
          @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
@@ -298,12 +303,12 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
       new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
     end
     pop = copy(new_pop)
-    push!(mean_arr, mean(exp(pop.theta), 2)[1])
-    push!(std_arr, std(exp(pop.theta), 2)[1])
+    push!(mean_arr, mean(pop.theta, 2)[1])
+    push!(std_arr, std(pop.theta, 2)[1])
     push!(eps_arr, epsilon)
     if verbose && (t%print_every == 0)
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
-       println("Mean(theta)= ", mean(exp(pop.theta), 2), " Stand. Dev.(theta)= ", std(exp(pop.theta), 2))
+       println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
        # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
     end
     #if epsilon < plan.target_epsilon  # stop once acheive goal
