@@ -21,7 +21,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          ss_star = plan.calc_summary_stats(data_star)
          if plan.save_summary_stats
            push!(summary_stats_log.theta, theta_star) 
-           push!(summary_stats_log.ss, ss_star) 
+           #push!(summary_stats_log.ss, ss_star) 
          end 
          dist_star = plan.calc_dist(ss_true,ss_star)
          if dist_star < dist_best
@@ -68,7 +68,7 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
       theta[:,i], dist_theta[i], attempts[i], summary_stat_logs[i] = generate_theta(plan, plan.prior, ss_true, plan.epsilon_init)
       if plan.save_summary_stats
          append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
-         append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+         #append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
       end
   end
   weights = fill(1.0/plan.num_part,plan.num_part)
@@ -96,7 +96,7 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
       if plan.save_summary_stats
          summary_stat_logs[i] = map_results[i][4]
          append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
-         append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+         #append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
       end
   end
 
@@ -122,7 +122,7 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
       if plan.save_summary_stats
          summary_stat_logs[i] = pmap_results[i][4]
          append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
-         append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+         #append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
       end
   end
 
@@ -249,7 +249,7 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
        dist_theta_star =  map_results[i][2]
        if plan.save_summary_stats
           append!(new_pop.log.theta,dmap_results[i][4].theta)
-          append!(new_pop.log.ss,dmap_results[i][4].ss)
+          #append!(new_pop.log.ss,dmap_results[i][4].ss)
        end
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
@@ -286,7 +286,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
        theta_star, dist_theta_star, attempts[i], summary_stats = generate_theta(plan, sampler, ss_true, epsilon)
        if plan.save_summary_stats
           append!(new_pop.log.theta,summary_stats.theta)
-          append!(new_pop.log.ss,summary_stats.ss)
+          #append!(new_pop.log.ss,summary_stats.ss)
        end
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
@@ -354,9 +354,11 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     end
     if ((abs(eps_old-epsilon)/epsilon) < 1.0e-5)
       eps_diff_count += 1
+    else
+      eps_diff_count = 0
     end
-    if eps_diff_count > 4
-      println("# Halting due to epsilon not improving significantly for 5 consecutive generations.")
+    if eps_diff_count > 2
+      println("# Halting due to epsilon not improving significantly for 3 consecutive generations.")
       break
     end
   end # t / num_times
