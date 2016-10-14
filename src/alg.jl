@@ -8,6 +8,9 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       attempts = num_max_attempt
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
+         if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
+            theta_star = [theta_star]
+         end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
          data_star = plan.gen_data(theta_star)

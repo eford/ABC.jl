@@ -41,16 +41,16 @@ end
 
 type abc_summary_stats_log_type   # Not implemented yet
    theta::Array{Array{Float64,1},1}
-   ss::Array{Array{Float64},1}
+   ss::Array{Array{Any},1}
 
-   function abc_summary_stats_log_type(t::Array{Array{Float64,1},1}, ss::Array{Array{Float64,1},1})
+   function abc_summary_stats_log_type(t::Array{Array{Float64,1},1}, ss::Array{Array{Any},1})
       @assert length(t) == length(ss)
       new( t, ss )
    end
 end
 
 function abc_summary_stats_log_type()
-   abc_summary_stats_log_type( Array(Array{Float64,1},0), Array(Array{Float64,1},0) )
+   abc_summary_stats_log_type( Array(Array{Float64,1},0), Array(Array{Any},0) )
 end
 
 
