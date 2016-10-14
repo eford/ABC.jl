@@ -4,7 +4,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       @assert(epsilon>0.0)
       dist_best = Inf
       local theta_best
-      summary_stats_log = abc_summary_stats_log_type()
+      summary_stats_log = abc_log_type()
       attempts = num_max_attempt
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
@@ -15,8 +15,10 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          if(!plan.is_valid(theta_star)) continue end
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
-         if plan.save_summary_stats
+         if plan.save_params
            push!(summary_stats_log.theta, theta_star) 
+         end 
+         if plan.save_summary_stats
            push!(summary_stats_log.ss, ss_star) 
          end 
          dist_star = plan.calc_dist(ss_true,ss_star)
@@ -55,8 +57,8 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = zeros(plan.num_part)
-  summary_stat_logs = Array(abc_summary_stats_log_type,plan.num_part)
-  summary_stat_log_combo = abc_summary_stats_log_type()
+  summary_stat_logs = Array(abc_log_type,plan.num_part)
+  summary_stat_log_combo = abc_log_type()
   # Draw initial set of theta's from prior (either with dist<epsilon or best of num_max_attempts)
 
   for i in 1:plan.num_part
@@ -82,8 +84,8 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = Array(Int64,plan.num_part)
-  summary_stat_logs = Array(abc_summary_stats_log_type,plan.num_part)
-  summary_stat_log_combo = abc_summary_stats_log_type()
+  summary_stat_logs = Array(abc_log_type,plan.num_part)
+  summary_stat_log_combo = abc_log_type()
   for i in 1:plan.num_part
       theta[:,i]  = map_results[i][1]
       dist_theta[i]  = map_results[i][2]
@@ -108,8 +110,8 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = Array(Int64,plan.num_part)
-  summary_stat_logs = Array(abc_summary_stats_log_type,plan.num_part)
-  summary_stat_log_combo = abc_summary_stats_log_type()
+  summary_stat_logs = Array(abc_log_type,plan.num_part)
+  summary_stat_log_combo = abc_log_type()
   for i in 1:plan.num_part
       theta[:,i]  = pmap_results[i][1]
       dist_theta[i]  = pmap_results[i][2]
@@ -201,8 +203,10 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
        theta_star = pmap_results[i][1]
        dist_theta_star =  pmap_results[i][2]
-       if plan.save_summary_stats
+       if plan.params
           append!(new_pop.log.theta,pmap_results[i][4].theta)
+       end
+       if plan.save_summary_stats
           append!(new_pop.log.ss,pmap_results[i][4].ss)
        end
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
@@ -242,8 +246,10 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
        theta_star = map_results[i][1]
        dist_theta_star =  map_results[i][2]
-       if plan.save_summary_stats
+       if plan.save_params
           append!(new_pop.log.theta,dmap_results[i][4].theta)
+       end
+       if plan.save_summary_stats
           append!(new_pop.log.ss,dmap_results[i][4].ss)
        end
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
@@ -279,8 +285,10 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
 
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i], summary_stats = generate_theta(plan, sampler, ss_true, epsilon)
-       if plan.save_summary_stats
+       if plan.save_params
           append!(new_pop.log.theta,summary_stats.theta)
+       end
+       if plan.save_summary_stats
           append!(new_pop.log.ss,summary_stats.ss)
        end
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
