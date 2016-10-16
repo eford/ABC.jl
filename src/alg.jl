@@ -213,6 +213,9 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
          prior_pdf = Distributions.pdf(plan.prior,theta_star)
+         if isa(prior_pdf, Array)
+            prior_pdf = prior_pdf[1]
+         end
          # sampler_pdf calculation must match distribution used to update particle
          sampler_pdf = pdf(sampler, theta_star )
          @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
@@ -256,6 +259,9 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
          prior_pdf = Distributions.pdf(plan.prior,theta_star)
+         if isa(prior_pdf, Array)
+            prior_pdf = prior_pdf[1]
+         end
          # sampler_pdf calculation must match distribution used to update particle
          sampler_pdf = pdf(sampler, theta_star )
          @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
@@ -296,6 +302,9 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
          prior_pdf = Distributions.pdf(plan.prior,theta_star)
+         if isa(prior_pdf, Array)
+            prior_pdf = prior_pdf[1]
+         end
          # sampler_pdf calculation must match distribution used to update particle
          sampler_pdf = pdf(sampler, theta_star )
          @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
