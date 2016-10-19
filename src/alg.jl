@@ -9,7 +9,8 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       dist_best = Inf
       local theta_best
       summary_stats_log = abc_log_type()
-      attempts = num_max_attempt
+      attempts = 0
+      all_attempts = num_max_attempt
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
@@ -17,6 +18,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
+         attempts += 1
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
          if plan.save_params
@@ -31,15 +33,14 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
             theta_best = copy(theta_star)
          end
          if(dist_best < epsilon)
-            #println("Current distance: ", dist_best, " / Current rate: ", exp(theta_best[1]))
-            attempts = a
+            all_attempts = a
             break
          end
       end
       if dist_best == Inf
         error("# Failed to generate any acceptable thetas.")
       end
-      # println("gen_theta: d= ",dist_best, " a= ",attempts, " theta= ", theta_best)
+      # println("gen_theta: d= ",dist_best, " num_valid_attempts= ",attempts, " num_all_attempts= ", all_attempts, " theta= ", theta_best)
       return (theta_best, dist_best, attempts, summary_stats_log)
 end
 
@@ -74,8 +75,9 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
       end
   end
   weights = fill(1.0/plan.num_part,plan.num_part)
-  
-  return abc_population_type(theta,weights,dist_theta,summary_stat_log_combo)
+  logpriorvals = Distributions.logpdf(plan.prior,theta)
+ 
+  return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
 end
 
 function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
@@ -103,7 +105,8 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
   end
 
   weights = fill(1.0/plan.num_part,plan.num_part)
-  return abc_population_type(theta,weights,dist_theta, summary_stat_log_combo)
+  logpriorvals = Distributions.logpdf(plan.prior,theta)
+  return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
 end
 
 function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
@@ -129,7 +132,8 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   end
 
   weights = fill(1.0/plan.num_part,plan.num_part)
-  return abc_population_type(theta,weights,dist_theta, summary_stat_log_combo)
+  logpriorvals = Distributions.logpdf(plan.prior,theta)
+  return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
 end
 
 function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
@@ -201,6 +205,15 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = deepcopy(pop)
   sampler = plan.make_proposal_dist(pop, plan.tau_factor)
+  if plan.adaptive_quantiles
+    sampler_logpdf = logpdf(sampler, pop.theta)
+    target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
+    if target_quantile_this_itteration > 1.0
+       target_quantile_this_itteration = 1.0
+    end
+    epsilon = quantile(pop.dist,target_quantile_this_itteration)
+    println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
+  end
 
   pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), collect(1:plan.num_part))
      for i in 1:plan.num_part
@@ -217,13 +230,13 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
-         prior_pdf = Distributions.pdf(plan.prior,theta_star)
+         prior_logpdf = Distributions.logpdf(plan.prior,theta_star)
          if isa(prior_pdf, Array)
-            prior_pdf = prior_pdf[1]
+            prior_logpdf = prior_logpdf[1]
          end
          # sampler_pdf calculation must match distribution used to update particle
-         sampler_pdf = pdf(sampler, theta_star )
-         @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
+         sampler_logpdf = pdf(sampler, theta_star )
+         @inbounds new_pop.weights[i] = exp(prior_logpdf-sampler_logpdf)
          @inbounds new_pop.repeats[i] = 0
        else  # failed to generate a closer set of parameters, so...
          # ... generate new data set with existing parameters
@@ -245,6 +258,15 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = deepcopy(pop)
   sampler = plan.make_proposal_dist(pop, plan.tau_factor)
+  if plan.adaptive_quantiles
+    sampler_logpdf = logpdf(sampler, pop.theta)
+    target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
+    if target_quantile_this_itteration > 1.0
+       target_quantile_this_itteration = 1.0
+    end
+    epsilon = quantile(pop.dist,target_quantile_this_itteration)
+    println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
+  end
 
   darr_silly = dzeros(plan.num_part)
   dmap_results = map(x->generate_theta(plan, sampler, ss_true, epsilon), darr_silly)
@@ -263,13 +285,13 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
-         prior_pdf = Distributions.pdf(plan.prior,theta_star)
-         if isa(prior_pdf, Array)
-            prior_pdf = prior_pdf[1]
+         prior_logpdf = Distributions.pdf(plan.prior,theta_star)
+         if isa(prior_logpdf, Array)
+            prior_logpdf = prior_logpdf[1]
          end
          # sampler_pdf calculation must match distribution used to update particle
-         sampler_pdf = pdf(sampler, theta_star )
-         @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
+         sampler_logpdf = logpdf(sampler, theta_star )
+         @inbounds new_pop.weights[i] = exp(prior_logpdf-sampler_logpdf)
          @inbounds new_pop.repeats[i] = 0
        else  # failed to generate a closer set of parameters, so...
          # ... generate new data set with existing parameters
@@ -292,7 +314,17 @@ end
 function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = deepcopy(pop)
+  #new_pop = similar(pop)  # Need new memory, but not old values
   sampler = plan.make_proposal_dist(pop, plan.tau_factor)
+  if plan.adaptive_quantiles
+    sampler_logpdf = logpdf(sampler, pop.theta)
+    target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
+    if target_quantile_this_itteration > 1.0
+       target_quantile_this_itteration = 1.0
+    end
+    epsilon = quantile(pop.dist,target_quantile_this_itteration)
+    println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
+  end
 
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i], summary_stats = generate_theta(plan, sampler, ss_true, epsilon)
@@ -306,13 +338,15 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
-         prior_pdf = Distributions.pdf(plan.prior,theta_star)
-	 if isa(prior_pdf, Array)
-           prior_pdf = prior_pdf[1]
+         prior_logpdf = Distributions.logpdf(plan.prior,theta_star)
+         if isa(prior_logpdf, Array)
+            prior_logpdf = prior_logpdf[1]
          end
          # sampler_pdf calculation must match distribution used to update particle
-         sampler_pdf = pdf(sampler, theta_star )
-         @inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
+         sampler_logpdf = logpdf(sampler, theta_star )
+         #@inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
+         @inbounds new_pop.weights[i] = exp(prior_logpdf-sampler_logpdf)
+         @inbounds new_pop.logpdf[i] = sampler_logpdf
          @inbounds new_pop.repeats[i] = 0
        else  # failed to generate a closer set of parameters, so...
          # ... generate new data set with existing parameters
@@ -323,6 +357,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          @inbounds new_pop.dist[i] = pop.dist[i]
          @inbounds new_pop.theta[:,i] = pop.theta[:,i]
          @inbounds new_pop.weights[i] = pop.weights[i]
+         @inbounds new_pop.logpdf[i] = pop.logpdf[i]
          @inbounds new_pop.repeats[i] += 1
        end
      end # i / num_parts

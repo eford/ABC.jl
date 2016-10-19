@@ -43,7 +43,7 @@ ss_true = abc_plan.calc_summary_stats(data_true)
 #println("theta= ",theta_true," ss= ",ss_true, " d= ", 0.)
 
 # Run ABC simulation
-pop_out = run_abc(abc_plan,ss_true);
+@time pop_out = run_abc(abc_plan,ss_true);
 
 
 #=
