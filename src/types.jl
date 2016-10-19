@@ -1,13 +1,13 @@
 abstract abc_plan_type
 
 type abc_pmc_plan_saveable_type <: abc_plan_type
-   gen_data::String
-   calc_summary_stats::String
-   calc_dist::String
+   gen_data::AbstractString
+   calc_summary_stats::AbstractString
+   calc_dist::AbstractString
    prior::Distribution
-   make_proposal_dist::String
-   normalize::String
-   is_valid::String
+   make_proposal_dist::AbstractString
+   normalize::AbstractString
+   is_valid::AbstractString
    num_part::Integer
    num_max_attempt::Integer 
    num_max_times::Integer 
