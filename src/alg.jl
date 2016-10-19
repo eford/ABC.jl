@@ -5,7 +5,8 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       dist_best = Inf
       local theta_best
       summary_stats_log = abc_log_type()
-      attempts = num_max_attempt
+      attempts = 0
+      all_attempts = num_max_attempt
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
@@ -13,6 +14,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
+         attempts += 1
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
          if plan.save_params
@@ -27,14 +29,14 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
             theta_best = copy(theta_star)
          end
          if(dist_best < epsilon)
-            attempts = a
+            all_attempts = a
             break
          end
       end
       if dist_best == Inf
         error("# Failed to generate any acceptable thetas.")
       end
-      # println("gen_theta: d= ",dist_best, " a= ",attempts, " theta= ", theta_best)
+      # println("gen_theta: d= ",dist_best, " num_valid_attempts= ",attempts, " num_all_attempts= ", all_attempts, " theta= ", theta_best)
       return (theta_best, dist_best, attempts, summary_stats_log)
 end
 
