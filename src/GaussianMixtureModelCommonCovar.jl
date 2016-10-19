@@ -2,8 +2,9 @@ if !isdefined(:Distributions) using Distributions end
 if !isdefined(:PDMats)        using PDMats end
 
 
+abstract GaussianMixtureModelCommonCovarAbstract <: Distribution
 
-immutable GaussianMixtureModelCommonCovar <: Distribution
+immutable GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat
@@ -31,7 +32,7 @@ immutable GaussianMixtureModelCommonCovar <: Distribution
     end
 end
 
-function mean(d::GaussianMixtureModelCommonCovar)
+function mean(d::GaussianMixtureModelCommonCovarAbstract)
     np = size(d.mu,2)
     m = zeros(np)
     for i in 1:length(d.probs)
@@ -40,7 +41,7 @@ function mean(d::GaussianMixtureModelCommonCovar)
     return m
 end
 
-function pdf(d::GaussianMixtureModelCommonCovar, x::Any)
+function pdf(d::GaussianMixtureModelCommonCovar, x::Array{Float64,1} )
     p = 0.0
     for i in 1:length(d.probs)
         p += Distributions.pdf(Distributions.MvNormal(d.covar), x .- vec(d.mu[:,i]) ) * d.probs[i]
@@ -48,12 +49,34 @@ function pdf(d::GaussianMixtureModelCommonCovar, x::Any)
     return p
 end
 
-function logpdf(d::GaussianMixtureModelCommonCovar, x::Any)
+function pdf(d::GaussianMixtureModelCommonCovar, x::Array{Float64,2} )
+    np = size(x,2)
+    p = zeros(np)
+    for i in 1:length(d.probs)
+        p += Distributions.pdf(Distributions.MvNormal(d.covar), x .- vec(d.mu[:,i]) ) * d.probs[i]
+    end
+    return p
+end
+
+function logpdf(d::GaussianMixtureModelCommonCovar, x::Array{Float64,1})
     logp = -Inf
     for i in 1:length(d.probs)
         if d.probs[i]<=0.0 continue end
         logp_i = Distributions.logpdf(Distributions.MvNormal(d.covar), x .- vec(d.mu[:,i]) ) + log(d.probs[i])
         logp = logp > logp_i ? logp + log1p(exp(logp_i-logp)) : logp_i + log1p(exp(logp-logp_i))
+    end
+    return logp
+end
+
+function logpdf(d::GaussianMixtureModelCommonCovar, x::Array{Float64,2})
+    np = size(x,2)
+    logp = fill(-Inf,np)
+    for i in 1:length(d.probs)
+        if d.probs[i]<=0.0 continue end
+        logp_i = Distributions.logpdf(Distributions.MvNormal(d.covar), x .- vec(d.mu[:,i]) ) + log(d.probs[i])
+        for j in 1:length(logp)
+          logp[j] = logp[j] > logp_i[j] ? logp[j] + log1p(exp(logp_i[j]-logp[j])) : logp_i[j] + log1p(exp(logp[j]-logp_i[j]))
+        end
     end
     return logp
 end
@@ -64,7 +87,7 @@ function rand(d::GaussianMixtureModelCommonCovar)
 end
 
 
-immutable GaussianMixtureModelCommonCovarSubset <: Distribution
+immutable GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat
@@ -135,7 +158,16 @@ function pdf(d::GaussianMixtureModelCommonCovarSubset, x::Vector{Float64} )
     return p
 end
 
-function logpdf(d::GaussianMixtureModelCommonCovar, x::Vector{Float64})
+function pdf(d::GaussianMixtureModelCommonCovarSubset, x::Array{Float64,2} )
+    np = size(x,2)
+    p = zeros(np)
+    for i in 1:length(d.probs)
+        p += Distributions.pdf(Distributions.MvNormal(d.covar), x[d.param_active,:] .- vec(d.mu[d.param_active,i]) ) * d.probs[i]
+    end
+    return p
+end
+
+function logpdf(d::GaussianMixtureModelCommonCovarSubset, x::Vector{Float64})
     logp = -Inf
     for i in 1:length(d.probs)
         if d.probs[i]<=0.0 continue end
@@ -145,6 +177,18 @@ function logpdf(d::GaussianMixtureModelCommonCovar, x::Vector{Float64})
     return logp
 end
 
+function logpdf(d::GaussianMixtureModelCommonCovarSubset, x::Array{Float64,2})
+    np = size(x,2)
+    logp = fill(-Inf,np)
+    for i in 1:length(d.probs)
+        if d.probs[i]<=0.0 continue end
+        logp_i = Distributions.logpdf(Distributions.MvNormal(d.covar), x[d.param_active,:] .- vec(d.mu[d.param_active,i]) ) + log(d.probs[i])
+        for j in 1:length(logp)
+          logp[j] = logp[j] > logp_i[j] ? logp[j] + log1p(exp(logp_i[j]-logp[j])) : logp_i[j] + log1p(exp(logp[j]-logp_i[j]))
+        end
+    end
+    return logp
+end
 
 # Need to know dimension
 function rand(d::GaussianMixtureModelCommonCovarSubset)
