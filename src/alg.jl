@@ -13,7 +13,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
-            theta_star = fill(theta_star, length(plan.prior))
+            theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
@@ -353,6 +353,9 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
        println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
        # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
     end
+    push!(eps_arr, epsilon)
+    push!(mean_arr, mean(pop.theta,2)[1])
+    push!(std_arr, std(pop.theta,2)[1])
     #if epsilon < plan.target_epsilon  # stop once acheive goal
     if maximum(pop.dist) < plan.target_epsilon  # stop once acheive goal
        println("# Reached ",epsilon," after ", t, " generations.")
@@ -371,7 +374,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     else
       eps_diff_count = 0
     end
-    if eps_diff_count > 2
+    if eps_diff_count > 1
       println("# Halting due to epsilon not improving significantly for 3 consecutive generations.")
       break
     end
