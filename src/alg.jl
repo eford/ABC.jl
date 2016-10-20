@@ -24,6 +24,9 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
            push!(summary_stats_log.ss, ss_star)
          end
          dist_star = plan.calc_dist(ss_true,ss_star)
+         if plan.save_distances
+           push!(summary_stats_log.dist, dist_star)
+         end
          if dist_star < dist_best
             dist_best = dist_star
             theta_best = copy(theta_star)
@@ -65,9 +68,14 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
 
   for i in 1:plan.num_part
       theta[:,i], dist_theta[i], attempts[i], summary_stat_logs[i] = generate_theta(plan, plan.prior, ss_true, plan.epsilon_init)
-      if plan.save_summary_stats
+      if plan.save_params
          append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
+      end
+      if plan.save_summary_stats
          append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+      end
+      if plan.save_distances
+         append!(summary_stat_log_combo.dist, summary_stat_logs[i].dist)
       end
   end
   weights = fill(1.0/plan.num_part,plan.num_part)
@@ -93,10 +101,17 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
       theta[:,i]  = map_results[i][1]
       dist_theta[i]  = map_results[i][2]
       attempts[i]  = map_results[i][3]
-      if plan.save_summary_stats
+      if plan.save_params || plan.save_summary_stats || plan.save_distances
          summary_stat_logs[i] = map_results[i][4]
-         append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
-         append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+         if plan.save_params
+           append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
+        end
+        if plan.save_summary_stats
+          append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+        end
+        if plan.save_distances
+           append!(summary_stat_log_combo.dist, summary_stat_logs[i].dist)
+        end
       end
   end
 
@@ -120,10 +135,23 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
       theta[:,i]  = pmap_results[i][1]
       dist_theta[i]  = pmap_results[i][2]
       attempts[i]  = pmap_results[i][3]
-      if plan.save_summary_stats
+      #=if plan.save_summary_stats
          summary_stat_logs[i] = pmap_results[i][4]
          append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
          append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+      end
+      =#
+      if plan.save_params || plan.save_summary_stats || plan.save_distances
+         summary_stat_logs[i] = pmap_results[i][4]
+         if plan.save_params
+           append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
+        end
+        if plan.save_summary_stats
+          append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+        end
+        if plan.save_distances
+           append!(summary_stat_log_combo.dist, summary_stat_logs[i].dist)
+        end
       end
   end
 
@@ -207,11 +235,15 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
        theta_star = pmap_results[i][1]
        dist_theta_star =  pmap_results[i][2]
        if plan.params
-          append!(new_pop.log.theta,pmap_results[i][4].theta)
+          append!(new_pop.log.theta, pmap_results[i][4].theta)
        end
        if plan.save_summary_stats
-          append!(new_pop.log.ss,pmap_results[i][4].ss)
+          append!(new_pop.log.ss, pmap_results[i][4].ss)
        end
+       if plan.save_distances
+          append!(new_pop.log.dist, pmap_results[i][4].dist)
+       end
+
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
@@ -256,6 +288,9 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
        if plan.save_summary_stats
           append!(new_pop.log.ss,dmap_results[i][4].ss)
        end
+       if plan.save_distances
+          append!(new_pop.log.dist, dmap_results[i][4].dist)
+       end
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
@@ -296,6 +331,9 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
        end
        if plan.save_summary_stats
           append!(new_pop.log.ss,summary_stats.ss)
+       end
+       if plan.save_distances
+          append!(new_pop.log.dist, dist_theta_star)
        end
        #if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.dist[i] = dist_theta_star
@@ -339,7 +377,8 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     local new_pop
     sampler = plan.make_proposal_dist(pop, plan.tau_factor)
     if plan.adaptive_quantiles
-      epsilon = choose_epsilon_adaptive(pop, sampler)
+      min_quantile = t==1 ? 4.0/size(pop.theta,2) : 1.0/sqrt(size(pop.theta,2))
+      epsilon = choose_epsilon_adaptive(pop, sampler, min_quantile=min_quantile)
     end
     if in_parallel
       #new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
@@ -374,18 +413,18 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   return pop
 end
 
-function choose_epsilon_adaptive(pop::abc_population_type, sampler::Distribution)
-  const min_quantile =  1.0/sqrt(size(pop.theta,2))
+function choose_epsilon_adaptive(pop::abc_population_type, sampler::Distribution; min_quantile::Real = 1.0/sqrt(size(pop.theta,2)) )
   sampler_logpdf = logpdf(sampler, pop.theta)
   target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
   if target_quantile_this_itteration > 1.0
      target_quantile_this_itteration = 1.0
   end
+  optimal_target_quantile = target_quantile_this_itteration
   if target_quantile_this_itteration < min_quantile
      target_quantile_this_itteration = min_quantile
   end
   epsilon = quantile(pop.dist,target_quantile_this_itteration)
-  println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
+  println("# Estimated target quantile is ", optimal_target_quantile, " using ",target_quantile_this_itteration, " resulting in epsilon = ", epsilon)
   return epsilon
 end
 
