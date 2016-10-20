@@ -71,6 +71,7 @@ function abc_pmc_plan_saveable_type(plan::abc_pmc_plan_type)
   abc_pmc_plan_saveable_type(string(plan.gen_data),string(plan.calc_summary_stats),string(plan.calc_dist),plan.prior,string(plan.make_proposal_dist),string(plan.normalize),string(plan.is_valid),plan.num_part,plan.num_max_attempt,plan.num_max_times,plan.epsilon_init,plan.init_epsilon_quantile,plan.epsilon_reduction_factor,plan.target_epsilon,plan.tau_factor,plan.param_active,plan.adaptive_quantiles,plan.stop_on_decreasing_efficiency,plan.save_params,plan.save_summary_stats,plan.in_parallel)
 end
 
+# WARNING: This doesn't really work yet.  There seems to be some issue with the scope of the saved function and what's currently imported
 function abc_pmc_plan_type(plan::abc_pmc_plan_saveable_type)
   abc_pmc_plan_saveable_type(eval(Symbol(plan.gen_data)),eval(Symbol(plan.calc_summary_stats)),eval(Symbol(plan.calc_dist)),plan.prior,eval(Symbol(plan.make_proposal_dist)),eval(Symbol(plan.normalize)),eval(Symbol(plan.is_valid)),plan.num_part,plan.num_max_attempt,plan.num_max_times,plan.epsilon_init,plan.init_epsilon_quantile,plan.epsilon_reduction_factor,plan.target_epsilon,plan.tau_factor,plan.param_active,plan.adaptive_quantiles,plan.stop_on_decreasing_efficiency,plan.save_params,plan.save_summary_stats,plan.in_parallel)
 end
@@ -118,4 +119,6 @@ type abc_population_type
    end
 end
 
-
+function abc_population_type(num_param::Integer, num_particles::Integer; abc_log::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,num_particles) )
+   abc_population_type(zeros(num_param,num_particles), zeros(num_particles), zeros(num_particles), ones(Float64,num_particles)/num_particles, abc_log, repeats)
+end

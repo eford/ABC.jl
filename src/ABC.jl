@@ -27,6 +27,7 @@ import Base: rand
 
 # until added to distributions, use our own
 include("GaussianMixtureModelCommonCovar.jl")
+#include("CompositeDistributions.jl")
 
 include("types.jl")
 include("util.jl")

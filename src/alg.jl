@@ -197,20 +197,9 @@ function make_proposal_dist_gaussian_rand_subset_diag_covar(pop::abc_population_
 end
 
 # Update the abc population once
-function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
+function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, sampler::Distribution, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = deepcopy(pop)
-  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
-  if plan.adaptive_quantiles
-    sampler_logpdf = logpdf(sampler, pop.theta)
-    target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
-    if target_quantile_this_itteration > 1.0
-       target_quantile_this_itteration = 1.0
-    end
-    epsilon = quantile(pop.dist,target_quantile_this_itteration)
-    println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
-  end
-
   pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), collect(1:plan.num_part))
      for i in 1:plan.num_part
        #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
@@ -250,20 +239,9 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
    return new_pop
 end
 
-function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
+function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, sampler::Distribution, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
   new_pop = deepcopy(pop)
-  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
-  if plan.adaptive_quantiles
-    sampler_logpdf = logpdf(sampler, pop.theta)
-    target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
-    if target_quantile_this_itteration > 1.0
-       target_quantile_this_itteration = 1.0
-    end
-    epsilon = quantile(pop.dist,target_quantile_this_itteration)
-    println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
-  end
-
   darr_silly = dzeros(plan.num_part)
   dmap_results = map(x->generate_theta(plan, sampler, ss_true, epsilon), darr_silly)
   map_results = collect(dmap_results)
@@ -307,21 +285,10 @@ end
 
 
 # Update the abc population once
-function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, epsilon::Float64;
-                        attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
-  new_pop = deepcopy(pop)
-  #new_pop = similar(pop)  # Need new memory, but not old values
-  sampler = plan.make_proposal_dist(pop, plan.tau_factor)
-  if plan.adaptive_quantiles
-    sampler_logpdf = logpdf(sampler, pop.theta)
-    target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
-    if target_quantile_this_itteration > 1.0
-       target_quantile_this_itteration = 1.0
-    end
-    epsilon = quantile(pop.dist,target_quantile_this_itteration)
-    println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
-  end
-
+function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, sampler::Distribution, epsilon::Float64;
+                        attempts::Array{Int64,1} = zeros(Int64,plan.num_part) )
+  #new_pop = deepcopy(pop)
+  new_pop = abc_population_type(size(pop.theta,1), size(pop.theta,2), abc_log=pop.log, repeats=pop.repeats)
      for i in 1:plan.num_part
        theta_star, dist_theta_star, attempts[i], summary_stats = generate_theta(plan, sampler, ss_true, epsilon)
        if plan.save_params
@@ -368,10 +335,16 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
   for t in 1:plan.num_max_times
     local new_pop
+    sampler = plan.make_proposal_dist(pop, plan.tau_factor)
+    if plan.adaptive_quantiles
+      epsilon = choose_epsilon_adaptive(pop, sampler)
+    end
     if in_parallel
-      new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
+      #new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
+	  new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
     else
-      new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
+	  #new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
+      new_pop = update_abc_pop_serial(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
     end
     pop = new_pop
     if verbose && (t%print_every == 0)
@@ -393,6 +366,21 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   end # t / num_times
   #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
   return pop
+end
+
+function choose_epsilon_adaptive(pop::abc_population_type, sampler::Distribution)
+  const min_quantile =  1.0/sqrt(size(pop.theta,2))
+  sampler_logpdf = logpdf(sampler, pop.theta)
+  target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
+  if target_quantile_this_itteration > 1.0
+     target_quantile_this_itteration = 1.0
+  end
+  if target_quantile_this_itteration < min_quantile
+     target_quantile_this_itteration = min_quantile
+  end
+  epsilon = quantile(pop.dist,target_quantile_this_itteration)
+  println("# Setting target quantile to ",target_quantile_this_itteration, " and epsilon to ", epsilon)
+  return epsilon
 end
 
 # run the ABC algorithm matching to summary statistics ss_true
