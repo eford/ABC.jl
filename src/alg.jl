@@ -18,11 +18,11 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
          if plan.save_params
-           push!(summary_stats_log.theta, theta_star) 
-         end 
+           push!(summary_stats_log.theta, theta_star)
+         end
          if plan.save_summary_stats
-           push!(summary_stats_log.ss, ss_star) 
-         end 
+           push!(summary_stats_log.ss, ss_star)
+         end
          dist_star = plan.calc_dist(ss_true,ss_star)
          if dist_star < dist_best
             dist_best = dist_star
@@ -72,7 +72,7 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   end
   weights = fill(1.0/plan.num_part,plan.num_part)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
- 
+
   return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
 end
 
@@ -188,12 +188,12 @@ end
 
 function make_proposal_dist_gaussian_rand_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
   param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
-  make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active ) 
+  make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
 
 function make_proposal_dist_gaussian_rand_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
   param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
-  make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active ) 
+  make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
 
 # Update the abc population once
@@ -297,12 +297,11 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
        if plan.save_summary_stats
           append!(new_pop.log.ss,summary_stats.ss)
        end
-       # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
-       if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
+       #if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
          prior_logpdf = Distributions.logpdf(plan.prior,theta_star)
-         if isa(prior_logpdf, Array)
+         if isa(prior_logpdf, Array)   # TODO: Can remove this once Danley's code uses composite distribution
             prior_logpdf = prior_logpdf[1]
          end
          # sampler_pdf calculation must match distribution used to update particle
@@ -310,6 +309,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          #@inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
          @inbounds new_pop.weights[i] = exp(prior_logpdf-sampler_logpdf)
          @inbounds new_pop.logpdf[i] = sampler_logpdf
+      if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.repeats[i] = 0
        else  # failed to generate a closer set of parameters, so...
          # ... generate new data set with existing parameters
@@ -317,10 +317,12 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          #new_ss = plan.calc_summary_stats(new_data)
          #@inbounds new_pop.dist[i] = plan.calc_dist(ss_true,new_ss)
          # ... just keep last value for this time, and mark it as a repeat
+         #=
          @inbounds new_pop.dist[i] = pop.dist[i]
          @inbounds new_pop.theta[:,i] = pop.theta[:,i]
          @inbounds new_pop.weights[i] = pop.weights[i]
          @inbounds new_pop.logpdf[i] = pop.logpdf[i]
+         =#
          @inbounds new_pop.repeats[i] += 1
        end
      end # i / num_parts
@@ -341,7 +343,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     end
     if in_parallel
       #new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
-	  new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
+	    new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
     else
 	  #new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
       new_pop = update_abc_pop_serial(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
@@ -355,6 +357,10 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     if maximum(pop.dist) < plan.target_epsilon  # stop once acheive goal
        println("# Reached ",epsilon," after ", t, " generations.")
        break
+    end
+    if median(attempts)>0.1*plan.num_max_attempt
+      println("# Halting due to ", median(attempts), " median number of valid attempts.")
+      break
     end
     if sum(pop.repeats)>plan.num_part
       println("# Halting due to ", sum(pop.repeats), " repeats.")
