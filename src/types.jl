@@ -83,15 +83,16 @@ type abc_log_type   # Not implemented yet
    theta::Array{Array{Float64,1},1}
    ss::Array{Any,1}
    dist::Array{Float64,1}
+   generation_starts_at::Array{Int64,1}
 
-   function abc_log_type(t::Array{Array{Float64,1},1}, ss::Array{Any,1}, d::Array{Float64,1})
+   function abc_log_type(t::Array{Array{Float64,1},1}, ss::Array{Any,1}, d::Array{Float64,1}, gsa::Array{Int64,1} = ones(Int64,1))
       @assert length(t) == length(ss) == length(d)
-      new( t, ss, d )
+      new( t, ss, d, gsa )
    end
 end
 
 function abc_log_type()
-   abc_log_type( Array(Array{Float64,1},0), Array(Any,0), Array(Float64,0) )
+   abc_log_type( Array(Array{Float64,1},0), Array(Any,0), Array(Float64,0), Array(Int64,0) )
 end
 
 
@@ -113,15 +114,16 @@ type abc_population_type
    weights::Array{Float64,1}
    dist::Array{Float64,1}
    logpdf::Array{Float64,1}
-   log::abc_log_type
+   accept_log::abc_log_type
+   reject_log::abc_log_type
    repeats::Array{Int64,1}
 
-   function abc_population_type(t::Array{Float64,2}, w::Array{Float64,1}, d::Array{Float64,1}, lp::Array{Float64,1} = ones(Float64,length(w))/length(w), l::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,length(w)) )
+   function abc_population_type(t::Array{Float64,2}, w::Array{Float64,1}, d::Array{Float64,1}, lp::Array{Float64,1} = ones(Float64,length(w))/length(w), la::abc_log_type = abc_log_type(), lr::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,length(w)) )
       @assert(length(w)==length(d)==length(lp)==size(t,2)==length(repeats))
-      new(t,w,d,lp,l,repeats)
+      new(t,w,d,lp,la,lr,repeats)
    end
 end
 
-function abc_population_type(num_param::Integer, num_particles::Integer; abc_log::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,num_particles) )
-   abc_population_type(zeros(num_param,num_particles), zeros(num_particles), zeros(num_particles), ones(Float64,num_particles)/num_particles, abc_log, repeats)
+function abc_population_type(num_param::Integer, num_particles::Integer; accept_log::abc_log_type = abc_log_type(), reject_log::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,num_particles) )
+   abc_population_type(zeros(num_param,num_particles), zeros(num_particles), zeros(num_particles), ones(Float64,num_particles)/num_particles, accept_log, reject_log, repeats)
 end

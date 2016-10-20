@@ -1,10 +1,39 @@
 #include("alg_parallel_custom.jl")   # Demo of using @spawn and fetch to reduce memory usage
 
+function push_to_abc_log!(abc_log::abc_log_type, plan::abc_pmc_plan_type, theta_star::Array{Float64,1}, ss_star, dist_star::Float64)
+         if plan.save_params
+           push!(abc_log.theta, theta_star)
+         end
+         if plan.save_summary_stats
+           push!(abc_log.ss, ss_star)
+         end
+         if plan.save_distances
+           push!(abc_log.dist, dist_star)
+         end
+end
+
+function append_to_abc_log!(abc_log::abc_log_type, plan::abc_pmc_plan_type, theta_star::Array{Array{Float64,1},1}, ss_star::Array{Any,1}, dist_star::Array{Float64,1})
+         if plan.save_params
+           append!(abc_log.theta, theta_star)
+         end
+         if plan.save_summary_stats
+           append!(abc_log.ss, ss_star)
+         end
+         if plan.save_distances
+           append!(abc_log.dist, dist_star)
+         end
+end
+
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
       @assert(epsilon>0.0)
       dist_best = Inf
       local theta_best
-      summary_stats_log = abc_log_type()
+      #summary_stats_log = abc_log_type()
+      #push!(summary_stats_log.generation_starts_at, 1)
+      accept_log = abc_log_type()
+      reject_log = abc_log_type()
+      push!(accept_log.generation_starts_at, 1)
+      push!(reject_log.generation_starts_at, 1)
       attempts = 0
       all_attempts = num_max_attempt
       for a in 1:num_max_attempt
@@ -18,6 +47,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
          dist_star = plan.calc_dist(ss_true,ss_star)
+         #=
          if plan.save_params
            push!(summary_stats_log.theta, theta_star)
          end
@@ -27,10 +57,15 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          if plan.save_distances
            push!(summary_stats_log.dist, dist_star)
          end
+         =#
          if dist_star < dist_best
             dist_best = dist_star
             theta_best = copy(theta_star)
+            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
+         else
+            push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
          end
+
          if(dist_best < epsilon)
             all_attempts = a
             break
@@ -40,7 +75,8 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
         error("# Failed to generate any acceptable thetas.")
       end
       # println("gen_theta: d= ",dist_best, " num_valid_attempts= ",attempts, " num_all_attempts= ", all_attempts, " theta= ", theta_best)
-      return (theta_best, dist_best, attempts, summary_stats_log)
+      #return (theta_best, dist_best, attempts, summary_stats_log)
+      return (theta_best, dist_best, attempts, accept_log, reject_log)
 end
 
 # Generate initial abc population from prior, aiming for d(ss,ss_true)<epsilon
@@ -62,26 +98,40 @@ function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = zeros(plan.num_part)
-  summary_stat_logs = Array(abc_log_type,plan.num_part)
-  summary_stat_log_combo = abc_log_type()
+  #summary_stat_logs = Array(abc_log_type,plan.num_part)
+  #summary_stat_log_combo = abc_log_type()
+  accept_log_combo = abc_log_type()
+  reject_log_combo = abc_log_type()
   # Draw initial set of theta's from prior (either with dist<epsilon or best of num_max_attempts)
 
+  if plan.save_params || plan.save_summary_stats || plan.save_distances
+     push!(accept_log_combo.generation_starts_at,length(accept_log_combo.dist)+1)
+     push!(reject_log_combo.generation_starts_at,length(reject_log_combo.dist)+1)
+  end
   for i in 1:plan.num_part
-      theta[:,i], dist_theta[i], attempts[i], summary_stat_logs[i] = generate_theta(plan, plan.prior, ss_true, plan.epsilon_init)
+      theta[:,i], dist_theta[i], attempts[i], accept_log, reject_log = generate_theta(plan, plan.prior, ss_true, plan.epsilon_init)
+      append_to_abc_log!(accept_log_combo,plan,accept_log.theta,accept_log.ss,accept_log.dist)
+      append_to_abc_log!(reject_log_combo,plan,reject_log.theta,reject_log.ss,reject_log.dist)
+      #=
       if plan.save_params
-         append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
+         append!(accept_log_combo.theta, accept_log.theta)
+         append!(reject_log_combo.theta, reject_log.theta)
       end
       if plan.save_summary_stats
-         append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
+         append!(accept_log_combo.ss, accept_log.ss)
+         append!(reject_log_combo.ss, reject_log.ss)
       end
       if plan.save_distances
-         append!(summary_stat_log_combo.dist, summary_stat_logs[i].dist)
+         append!(accept_log_combo.dist, accept_log.dist)
+         append!(reject_log_combo.dist, reject_log.dist)
       end
+      =#
   end
   weights = fill(1.0/plan.num_part,plan.num_part)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
 
-  return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
+  #return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
+  return abc_population_type(theta,weights,dist_theta,logpriorvals,accept_log_combo,reject_log_combo)
 end
 
 function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
@@ -95,14 +145,24 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = Array(Int64,plan.num_part)
-  summary_stat_logs = Array(abc_log_type,plan.num_part)
-  summary_stat_log_combo = abc_log_type()
+  #summary_stat_logs = Array(abc_log_type,plan.num_part)
+  #summary_stat_log_combo = abc_log_type()
+  accept_log_combo = abc_log_type()
+  reject_log_combo = abc_log_type()
+  if plan.save_params || plan.save_summary_stats || plan.save_distances
+     push!(summary_stat_log_combo.generation_starts_at,length(summary_stat_log_combo.dist)+1)
+  end
   for i in 1:plan.num_part
       theta[:,i]  = map_results[i][1]
       dist_theta[i]  = map_results[i][2]
       attempts[i]  = map_results[i][3]
       if plan.save_params || plan.save_summary_stats || plan.save_distances
-         summary_stat_logs[i] = map_results[i][4]
+         #summary_stat_logs[i] = map_results[i][4]
+         accept_log = map_results[i][4]
+         reject_log = map_results[i][5]
+         append_to_abc_log!(accept_log_combo,plan,accept_log.theta,accept_log.ss,accept_log.dist)
+         append_to_abc_log!(reject_log_combo,plan,reject_log.theta,reject_log.ss,reject_log.dist)
+         #=
          if plan.save_params
            append!(summary_stat_log_combo.theta, summary_stat_logs[i].theta)
         end
@@ -112,12 +172,14 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
         if plan.save_distances
            append!(summary_stat_log_combo.dist, summary_stat_logs[i].dist)
         end
+        =#
       end
   end
 
   weights = fill(1.0/plan.num_part,plan.num_part)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
-  return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
+  #return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
+  return abc_population_type(theta,weights,dist_theta,logpriorvals,accept_log_combo,reject_log_combo)
 end
 
 function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
@@ -129,8 +191,13 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   theta = Array(Float64,(num_param,plan.num_part))
   dist_theta = Array(Float64,plan.num_part)
   attempts = Array(Int64,plan.num_part)
-  summary_stat_logs = Array(abc_log_type,plan.num_part)
-  summary_stat_log_combo = abc_log_type()
+  #summary_stat_logs = Array(abc_log_type,plan.num_part)
+  #summary_stat_log_combo = abc_log_type()
+  accept_log_combo = abc_log_type()
+  reject_log_combo = abc_log_type()
+  if plan.save_params || plan.save_summary_stats || plan.save_distances
+     push!(summary_stat_log_combo.generation_starts_at,length(summary_stat_log_combo.dist)+1)
+  end
   for i in 1:plan.num_part
       theta[:,i]  = pmap_results[i][1]
       dist_theta[i]  = pmap_results[i][2]
@@ -141,6 +208,11 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
          append!(summary_stat_log_combo.ss, summary_stat_logs[i].ss)
       end
       =#
+         accept_log = pmap_results[i][4]
+         reject_log = pmap_results[i][5]
+         append_to_abc_log!(accept_log_combo,plan,accept_log.theta,accept_log.ss,accept_log.dist)
+         append_to_abc_log!(reject_log_combo,plan,reject_log.theta,reject_log.ss,reject_log.dist)
+      #=
       if plan.save_params || plan.save_summary_stats || plan.save_distances
          summary_stat_logs[i] = pmap_results[i][4]
          if plan.save_params
@@ -153,11 +225,13 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
            append!(summary_stat_log_combo.dist, summary_stat_logs[i].dist)
         end
       end
+      =#
   end
 
   weights = fill(1.0/plan.num_part,plan.num_part)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
-  return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
+  #return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
+  return abc_population_type(theta,weights,dist_theta,logpriorvals,accept_log_combo,reject_log_combo)
 end
 
 function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
@@ -227,13 +301,24 @@ end
 # Update the abc population once
 function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, sampler::Distribution, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
-  new_pop = deepcopy(pop)
+  #new_pop = deepcopy(pop)
+  new_pop = abc_population_type(size(pop.theta,1), size(pop.theta,2), accept_log=pop.accept_log, reject_log=pop.reject_log, repeats=pop.repeats)
   pmap_results = pmap(x->generate_theta(plan, sampler, ss_true, epsilon), collect(1:plan.num_part))
+  if plan.save_params || plan.save_summary_stats || plan.save_distances
+     push!(new_pop.accept_log.generation_starts_at,length(new_pop.accept_log.dist)+1)
+     push!(new_pop.reject_log.generation_starts_at,length(new_pop.reject_log.dist)+1)
+  end
      for i in 1:plan.num_part
        #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
        theta_star = pmap_results[i][1]
        dist_theta_star =  pmap_results[i][2]
+       accept_log = pmap_results[i][4]
+       reject_log = pmap_results[i][5]
+       append_to_abc_log!(new_pop.accept_log,plan,accept_log.theta,accept_log.ss,accept_log.dist)
+       append_to_abc_log!(new_pop.reject_log,plan,reject_log.theta,reject_log.ss,reject_log.dist)
+
+       #=
        if plan.params
           append!(new_pop.log.theta, pmap_results[i][4].theta)
        end
@@ -243,7 +328,7 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
        if plan.save_distances
           append!(new_pop.log.dist, pmap_results[i][4].dist)
        end
-
+       =#
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
@@ -273,15 +358,26 @@ end
 
 function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, sampler::Distribution, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part))
-  new_pop = deepcopy(pop)
+  #new_pop = deepcopy(pop)
+  new_pop = abc_population_type(size(pop.theta,1), size(pop.theta,2), accept_log=pop.accept_log, reject_log=pop.reject_log, repeats=pop.repeats)
   darr_silly = dzeros(plan.num_part)
   dmap_results = map(x->generate_theta(plan, sampler, ss_true, epsilon), darr_silly)
   map_results = collect(dmap_results)
-     for i in 1:plan.num_part
+  if plan.save_params || plan.save_summary_stats || plan.save_distances
+     push!(new_pop.accept_log.generation_starts_at,length(new_pop.accept_log.dist)+1)
+     push!(new_pop.reject_log.generation_starts_at,length(new_pop.reject_log.dist)+1)
+  end
+  for i in 1:plan.num_part
        #theta_star, dist_theta_star, attempts[i] = generate_theta(plan, sampler, ss_true, epsilon)
        # if dist_theta_star < pop.dist[i] # replace theta with new set of parameters and update weight
        theta_star = map_results[i][1]
        dist_theta_star =  map_results[i][2]
+       accept_log = map_results[i][4]
+       reject_log = map_results[i][5]
+       append_to_abc_log!(new_pop.accept_log,plan,accept_log.theta,accept_log.ss,accept_log.dist)
+       append_to_abc_log!(new_pop.reject_log,plan,reject_log.theta,reject_log.ss,reject_log.dist)
+
+       #=
        if plan.save_params
           append!(new_pop.log.theta,dmap_results[i][4].theta)
        end
@@ -291,6 +387,7 @@ function update_abc_pop_parallel_darray(plan::abc_pmc_plan_type, ss_true, pop::a
        if plan.save_distances
           append!(new_pop.log.dist, dmap_results[i][4].dist)
        end
+       =#
        if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.theta[:,i] = theta_star
          @inbounds new_pop.dist[i] = dist_theta_star
@@ -323,9 +420,17 @@ end
 function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type, sampler::Distribution, epsilon::Float64;
                         attempts::Array{Int64,1} = zeros(Int64,plan.num_part) )
   #new_pop = deepcopy(pop)
-  new_pop = abc_population_type(size(pop.theta,1), size(pop.theta,2), abc_log=pop.log, repeats=pop.repeats)
+  new_pop = abc_population_type(size(pop.theta,1), size(pop.theta,2), accept_log=pop.accept_log, reject_log=pop.reject_log, repeats=pop.repeats)
+  if plan.save_params || plan.save_summary_stats || plan.save_distances
+     push!(new_pop.accept_log.generation_starts_at,length(new_pop.accept_log.dist)+1)
+     push!(new_pop.reject_log.generation_starts_at,length(new_pop.reject_log.dist)+1)
+  end
      for i in 1:plan.num_part
-       theta_star, dist_theta_star, attempts[i], summary_stats = generate_theta(plan, sampler, ss_true, epsilon)
+       #theta_star, dist_theta_star, attempts[i], summary_stats = generate_theta(plan, sampler, ss_true, epsilon)
+       theta_star, dist_theta_star, attempts[i], accept_log, reject_log = generate_theta(plan, sampler, ss_true, epsilon)
+       append_to_abc_log!(new_pop.accept_log,plan,accept_log.theta,accept_log.ss,accept_log.dist)
+       append_to_abc_log!(new_pop.reject_log,plan,reject_log.theta,reject_log.ss,reject_log.dist)
+       #=
        if plan.save_params
           append!(new_pop.log.theta,summary_stats.theta)
        end
@@ -336,6 +441,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
           #append!(new_pop.log.dist, dist_theta_star)
           append!(new_pop.log.dist, summary_stats.dist)
        end
+       =#
        #if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
