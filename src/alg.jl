@@ -17,13 +17,13 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          attempts += 1
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
+         dist_star = plan.calc_dist(ss_true,ss_star)
          if plan.save_params
            push!(summary_stats_log.theta, theta_star)
          end
          if plan.save_summary_stats
            push!(summary_stats_log.ss, ss_star)
          end
-         dist_star = plan.calc_dist(ss_true,ss_star)
          if plan.save_distances
            push!(summary_stats_log.dist, dist_star)
          end
@@ -333,7 +333,8 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
           append!(new_pop.log.ss,summary_stats.ss)
        end
        if plan.save_distances
-          append!(new_pop.log.dist, dist_theta_star)
+          #append!(new_pop.log.dist, dist_theta_star)
+          append!(new_pop.log.dist, summary_stats.dist)
        end
        #if dist_theta_star < epsilon # replace theta with new set of parameters and update weight
          @inbounds new_pop.dist[i] = dist_theta_star
