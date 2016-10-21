@@ -144,3 +144,15 @@ plot(x_train[1,:],y_train[3,:],"b.")
 plot(x_pred[2,:],y_pred[3,:],"r.")
 
 =#
+
+function test_abc_emulator(accept_log::ABC.abc_log_type, reject_log::ABC.abc_log_type, generation::Integer, num_use::Integer = 10)
+  (x_train,y_train) = make_training_data(accept_log, reject_log, generation, num_use)
+  emu = train_gp(x_train,y_train,y_train)
+  mar = marginal_gp(emu)
+  println("# logprob = ",mar)
+  x_pred = x_train
+  y_pred = predict_gp(emu,x_pred)
+  return (x_train,y_train,x_pred,y_pred)
+end
+
+

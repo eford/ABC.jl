@@ -23,7 +23,6 @@ function append_to_abc_log!(abc_log::abc_log_type, plan::abc_pmc_plan_type, thet
          end
 end
 
-include("emulator.jl")
 
 function draw_indices(abc_log::ABC.abc_log_type, num_use::Integer, start_idx::Integer = 1, stop_idx::Integer = length(abc_log.dist))
   @assert num_use >=1
@@ -63,12 +62,3 @@ function make_training_data(accept_log::ABC.abc_log_type, reject_log::ABC.abc_lo
  return (x_train, y_train)
 end
 
-function test_abc_emulator(accept_log::ABC.abc_log_type, reject_log::ABC.abc_log_type, generation::Integer, num_use::Integer = 10)
-  (x_train,y_train) = make_training_data(accept_log, reject_log, generation, num_use)
-  emu = train_gp(x_train,y_train,y_train)
-  mar = marginal_gp(emu)
-  println("# logprob = ",mar)
-  x_pred = x_train
-  y_pred = predict_gp(emu,x_pred)
-  return (x_train,y_train,x_pred,y_pred)
-end

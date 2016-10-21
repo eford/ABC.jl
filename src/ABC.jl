@@ -31,9 +31,13 @@ include("GaussianMixtureModelCommonCovar.jl")
 
 include("types.jl")
 include("util.jl")
-include("alg.jl")
+#include("alg.jl")
+include("alg_serial.jl")
+include("alg_parallel.jl")
+#include("alg_parallel_custom.jl")
 include("make_proposal.jl")
 include("log.jl")
+include("emulator.jl")
 
 end # module
 
