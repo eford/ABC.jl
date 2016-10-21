@@ -1,29 +1,4 @@
 #include("alg_parallel_custom.jl")   # Demo of using @spawn and fetch to reduce memory usage
-
-function push_to_abc_log!(abc_log::abc_log_type, plan::abc_pmc_plan_type, theta_star::Array{Float64,1}, ss_star, dist_star::Float64)
-         if plan.save_params
-           push!(abc_log.theta, theta_star)
-         end
-         if plan.save_summary_stats
-           push!(abc_log.ss, ss_star)
-         end
-         if plan.save_distances
-           push!(abc_log.dist, dist_star)
-         end
-end
-
-function append_to_abc_log!(abc_log::abc_log_type, plan::abc_pmc_plan_type, theta_star::Array{Array{Float64,1},1}, ss_star::Array{Any,1}, dist_star::Array{Float64,1})
-         if plan.save_params
-           append!(abc_log.theta, theta_star)
-         end
-         if plan.save_summary_stats
-           append!(abc_log.ss, ss_star)
-         end
-         if plan.save_distances
-           append!(abc_log.dist, dist_star)
-         end
-end
-
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
       @assert(epsilon>0.0)
       dist_best = Inf
@@ -77,6 +52,15 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       # println("gen_theta: d= ",dist_best, " num_valid_attempts= ",attempts, " num_all_attempts= ", all_attempts, " theta= ", theta_best)
       #return (theta_best, dist_best, attempts, summary_stats_log)
       return (theta_best, dist_best, attempts, accept_log, reject_log)
+end
+
+function generate_abc_sample(sampler_plot::Distribution, num_param::Integer, ss_true, epsilon::Real; num_plot::Integer = 100)
+  theta_plot = Array(Float64,(num_param, num_plot))
+  dist_plot = Array(Float64,num_plot)
+  for i in 1:num_plot
+    theta_plot[:,i], dist_plot[i], attempts_plot, accept_log_plot, reject_log_plot = ABC.generate_theta(abc_plan, sampler_plot, ss_true, epsilon)
+  end
+  return theta_plot, dist_plot
 end
 
 # Generate initial abc population from prior, aiming for d(ss,ss_true)<epsilon
@@ -232,70 +216,6 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
   #return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
   return abc_population_type(theta,weights,dist_theta,logpriorvals,accept_log_combo,reject_log_combo)
-end
-
-function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
-  rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  tau = tau_factor*make_matrix_pd(rawtau)
-  if verbose
-    println("theta_mean = ", theta_mean)
-    println("pop.theta = ", pop.theta)
-    println("pop.weights = ", pop.weights)
-    println("tau = ", tau)
-  end
-  covar = PDMat(tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
-end
-
-function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
-  tau = tau_factor*var_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  if verbose
-    println("theta_mean = ", theta_mean)
-    println("pop.theta = ", pop.theta)
-    println("pop.weights = ", pop.weights)
-    println("tau = ", tau)
-  end
-  covar = PDiagMat(tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
-end
-
-function make_proposal_dist_gaussian_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
-  rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  tau = tau_factor*make_matrix_pd(rawtau)
-  if verbose
-    println("theta_mean = ", theta_mean)
-    println("pop.theta = ", pop.theta)
-    println("pop.weights = ", pop.weights)
-    println("tau = ", tau)
-  end
-  covar = tau # PDMat(tau[param_active])
-  sampler = GaussianMixtureModelCommonCovarSubset(pop.theta,pop.weights,covar,param_active)
-end
-
-function make_proposal_dist_gaussian_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )
-  theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
-  tau = tau_factor*var_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
-  if verbose
-    println("theta_mean = ", theta_mean)
-    println("pop.theta = ", pop.theta)
-    println("pop.weights = ", pop.weights)
-    println("tau = ", tau)
-  end
-  covar = tau
-  sampler = GaussianMixtureModelCommonCovarSubset(pop.theta,pop.weights,covar,param_active)
-end
-
-function make_proposal_dist_gaussian_rand_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
-  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
-  make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
-end
-
-function make_proposal_dist_gaussian_rand_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
-  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
-  make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
 
 # Update the abc population once

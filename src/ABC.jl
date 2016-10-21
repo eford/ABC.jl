@@ -7,7 +7,7 @@ using PDMats
 using DistributedArrays
 
 export
-  # types 
+  # types
   abc_plan_type,
   abc_pmc_plan_type,
   abc_population_type,
@@ -32,6 +32,8 @@ include("GaussianMixtureModelCommonCovar.jl")
 include("types.jl")
 include("util.jl")
 include("alg.jl")
+include("make_proposal.jl")
+include("log.jl")
 
 end # module
 

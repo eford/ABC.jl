@@ -12,7 +12,21 @@ param_prior_mean  = MvLogNormal(log([10.0, 10.0]), diagm(log([10.0,10.0])))
  param_prior_cor = MvNormal(zeros(1),ones(1));
  param_prior = CompositeDist( ContinuousDistribution[param_prior_mean,param_prior_covar_diag,param_prior_cor] )
 
-function detection_prob(snr::Real) # Detection probability as a function of signal-to-noise ratio
+ function is_valid_mean_covar(theta::Array{Float64,1})  # Ensure that the proposed covariance matrix is positive definite
+  a = theta[3]^2                     # WARNING: Covariance matrix extracted here and when generating data must match
+  b = theta[3]*theta[4]*theta[5]
+  c = theta[3]*theta[4]*theta[5]
+  d = theta[4]^2
+  tr_covar = a+d
+  det_covar = a*d-b*c
+  if (det_covar>0) && (tr_covar>0)
+    return true
+  else
+    return false
+  end
+ end
+
+function detection_prob_snr_term(snr::Real) # Detection probability as a function of signal-to-noise ratio
   const sig =  1.0
   const snr_thresh = 7.1
   const snr_detect_never =  3.0
@@ -25,7 +39,17 @@ function detection_prob(snr::Real) # Detection probability as a function of sign
      pdet = 0.5*( 1+erf((snr - snr_thresh)/(sqrt2*sig)) )
   end
   return pdet
-end
+ end
+
+ function detection_prob_geometry_term(period::Real) # Transit probability as a function of orbital geometry
+    a = (period/days_in_year)^(2//3)
+    prob_geometric = min(1.0,radius_star/a)
+ end
+
+ detection_prob_return_one(period::Real, snr::Real) = 1.0
+ detection_prob_snr_only(period::Real, snr::Real) = detection_prob_snr_term(snr)
+ detection_prob_geometry_only(period::Real, snr::Real) = detection_prob_geometry_term(period)
+ detection_prob_snr_and_geometry(period::Real, snr::Real) = detection_prob_geometry_term(period) * detection_prob_snr_term(snr)
 
 num_data_default = 1000   # How many "planets" to include in universe
  # Code to generate simulated data given array of model parameters
@@ -36,24 +60,7 @@ num_data_default = 1000   # How many "planets" to include in universe
   return period_snr
  end
 
- function gen_period_snr_detected_all(theta::Array, n::Integer = num_data_default)  # All "planets" are detected
-  return (gen_period_snr(theta,n), trues(n))
- end
-
- function gen_period_snr_detected_snr_only(theta::Array, n::Integer = num_data_default) # "Planets" detection efficient depends on SNR only
-  period_snr = gen_period_snr(theta,n)
-  detected = trues(n)
-  for i in 1:n
-    snr = period_snr[2,i]
-    prob_detect = detection_prob( snr )
-    if rand() > prob_detect
-      detected[i] = false
-    end
-  end
-  return (period_snr, detected)
- end
-
- function gen_period_snr_detected_snr_and_geo(theta::Array, n::Integer = num_data_default)  # "Planets" detection efficient depends on SNR and orbital period
+ function gen_period_snr_detected(theta::Array, n::Integer = num_data_default; detection_prob::Function = detection_prob_snr_and_geometry)  # "Planets" detection efficient depends on SNR and orbital period
   period_snr = gen_period_snr(theta,n)
   detected = trues(n)
   const radius_star = 0.005
@@ -61,10 +68,7 @@ num_data_default = 1000   # How many "planets" to include in universe
   for i in 1:n
     period = period_snr[1,i]
     snr = period_snr[2,i]
-    prob_detect = detection_prob( snr )
-    a = (period/days_in_year)^(2//3)
-    prob_geometric = min(1.0,radius_star/a)
-    prob_detect *= prob_geometric
+    prob_detect = detection_prob( period, snr )
     if rand() > prob_detect
       detected[i] = false
     end
@@ -72,20 +76,11 @@ num_data_default = 1000   # How many "planets" to include in universe
   return (period_snr, detected)
  end
 
+ gen_period_snr_detected_all(theta::Array, n::Integer = num_data_default) = gen_period_snr_detected(theta,n,detection_prob=detection_prob_return_one)
+ gen_period_snr_detected_snr_only(theta::Array, n::Integer = num_data_default) = gen_period_snr_detected(theta,n,detection_prob=detection_prob_snr_only)
+ gen_period_snr_detected_geometry_only(theta::Array, n::Integer = num_data_default) = gen_period_snr_detected(theta,n,detection_prob=detection_prob_geometry_only)
+ gen_period_snr_detected_snr_and_geo(theta::Array, n::Integer = num_data_default) = gen_period_snr_detected(theta,n,detection_prob=detection_prob_snr_and_geometry)
 
- function is_valid_mean_covar(theta::Array{Float64,1})  # Ensure that the propose covariance matrix is positive definite
-  a = theta[3]^2                     # WARNING: Covariance matrix extracted here and when generating data must match
-  b = theta[3]*theta[4]*theta[5]
-  c = theta[3]*theta[4]*theta[5]
-  d = theta[4]^2
-  tr_covar = a+d
-  det_covar = a*d-b*c
-  if (det_covar>0) && (tr_covar>0)
-    return true
-  else
-    return false
-  end
-end
 
 function calc_summary_stats_mean_stddev_detected(data::Tuple{Array{Float64,2},BitArray{1}})
   period_snr = data[1]
@@ -117,10 +112,10 @@ theta_true = fill(NaN,5) #  Generate from hyperprior
 # Uncomment one of three options below one to pick how data is generated
 #gen_data = gen_period_snr_detected_all
 #num_data_default = 4000   # How many "planets" to include in universe
-#gen_data = gen_period_snr_detected_snr_only
-#num_data_default = 8000   # How many "planets" to include in universe
-gen_data = gen_period_snr_detected_snr_and_geo
-num_data_default = 48000   # How many "planets" to include in universe
+gen_data = gen_period_snr_detected_snr_only
+num_data_default = 8000   # How many "planets" to include in universe
+#gen_data = gen_period_snr_detected_snr_and_geo
+#num_data_default = 48000   # How many "planets" to include in universe
 
 #=
 ex_data =gen_data(theta_true)
@@ -131,7 +126,7 @@ length(find(ex_data[2]))
 # Tell ABC what it needs to know for a simulation
 abc_plan = abc_pmc_plan_type(gen_data,calc_summary_stats_mean_stddev_detected,ABC.calc_dist_max, param_prior;
                              is_valid=is_valid_mean_covar,adaptive_quantiles=true,num_max_attempt=1000,
-                             target_epsilon=0.01,epsilon_init=10.0,num_part=100,
+                             target_epsilon=0.01,epsilon_init=10.0,num_part=50,
    make_proposal_dist = ABC.make_proposal_dist_gaussian_full_covar);
 
 # Generate "true/observed data"
@@ -156,23 +151,33 @@ using JLD
 save("ex4_out.jld", "pop_out", pop_out)
 
 using PyPlot
-function plot_abc_posterior(pop::ABC.abc_population_type, index::Integer )
-  lo = minimum(pop_out.theta[index,:])
-  hi = maximum(pop_out.theta[index,:])
-  #sigma = (hi-lo)/length(pop.weights)
-  sigma = 3.0*sqrt(abs(cov(vec(pop_out.theta[index,:]),pop.weights)))
+function plot_abc_posterior(theta_plot::Array{Float64,2}, index::Integer)
+  lo = minimum(theta_plot[index,:])
+  hi = maximum(theta_plot[index,:])
+  sigma = 3.0*sqrt(abs(cov(vec(theta_plot[index,:]))))
   x = collect(linspace(lo-3*sigma,hi+3*sigma,100))
   y = zeros(x)
   for i in 1:length(x)
-    for j in 1:size(pop.theta,2)
-      y[i] += pop.weights[j]*pdf(Normal(pop.theta[index,j],sigma),x[i])
+    for j in 1:size(theta_plot,2)
+      y[i] += pdf(Normal(theta_plot[index,j],sigma),x[i])/size(theta_plot,2)
     end
   end
   plot(x,y,"-")
 end
-plot_abc_posterior(pop_out,1)
-plot_abc_posterior(pop_out,2)
-plot_abc_posterior(pop_out,3)
-plot_abc_posterior(pop_out,4)
-plot_abc_posterior(pop_out,5)
+
+plot_abc_posterior(pop_out.theta,1)
+plot_abc_posterior(pop_out.theta,2)
+plot_abc_posterior(pop_out.theta,3)
+plot_abc_posterior(pop_out.theta,4)
+plot_abc_posterior(pop_out.theta,5)
+
+#=
+sampler_plot = abc_plan.make_proposal_dist(pop_out, 1.0) # abc_plan.tau_factor)
+num_plot = 100
+epsilon = 0.05
+theta_plot, dist_plot = generate_abc_sample(sampler_plot,size(pop_out.theta, 1), ss_true, epsilon, num_plot=num_plot )
+plot_abc_posterior(theta_plot,1)
+med_dist = median(dist_plot)
+plot_abc_posterior(theta_plot[:,find(dist_plot.<=med_dist)],1)
+=#
 
