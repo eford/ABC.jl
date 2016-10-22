@@ -6,17 +6,17 @@ noop(x::Real) = return true
 import Base.copy
 copy(x::abc_population_type) = abc_population_type(copy(x.theta),copy(x.weights),copy(x.dist), copy(x.repeats))
 
-# Compute weighted covariance of sample (from origin) 
+# Compute weighted covariance of sample (from origin)
 function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   @assert(size(x,1)==length(w) )
   sumw = sum(w)
   @assert( sumw > 0. )
-  if(sumw!= 1.0) 
+  if(sumw!= 1.0)
      w /= sum(w)
      sumw = 1.0
   end
-  sumw2 = sum(w.*w)  
-  xbar = [ sum(x[:,i].*w) for i in 1:size(x,2) ]  
+  sumw2 = sum(w.*w)
+  xbar = [ sum(x[:,i].*w) for i in 1:size(x,2) ]
   covar = zeros(size(x,2),size(x,2))
   for k in 1:size(x,2)
     for j in 1:size(x,2)
@@ -29,17 +29,17 @@ function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   covar
 end
 
-# Compute weighted variances of sample (from origin) 
+# Compute weighted variances of sample (from origin)
 function var_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   @assert(size(x,1)==length(w) )
   sumw = sum(w)
   @assert( sumw > 0. )
-  if(sumw!= 1.0) 
+  if(sumw!= 1.0)
      w /= sum(w)
      sumw = 1.0
   end
-  sumw2 = sum(w.*w)  
-  xbar = [ sum(x[:,i].*w) for i in 1:size(x,2) ]  
+  sumw2 = sum(w.*w)
+  xbar = [ sum(x[:,i].*w) for i in 1:size(x,2) ]
   covar = zeros(size(x,2))
     for j in 1:size(x,2)
         for i in 1:size(x,1)
@@ -63,9 +63,9 @@ function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Floa
 	println(itt,": ",B)
         #cholB = chol(B)
 	itt +=1
-	if itt>size(A,1) 
+	if itt>size(A,1)
 	  error("There's a problem in make_matrix_pd.\n")
-  	  break 
+  	  break
 	end
   end
   return B
@@ -92,6 +92,22 @@ end
 calc_summary_stats_mean_var(x::Array) = ( @inbounds m=mean(x); @inbounds v = varm(x,m); return [m, v] )
 
 calc_dist_max(x::Array{Float64,1},y::Array{Float64,1}) = maximum(abs(x.-y))
+dist_scale = Array(Float64,0)
+calc_scaled_dist_max(x::Array{Float64,1},y::Array{Float64,1}, scale::Array{Float64,1} = dist_scale) = maximum(abs(x.-y)./scale)
+
+function set_distance_scale(ds::Array{Float64,1})
+  global dist_scale
+  dist_scale = copy(ds)
+end
+function set_distance_scale(plan::abc_pmc_plan_type, theta::Array{Float64,1}; num_draw::Integer = 40,
+                  ss::Array{Float64,1} = plan.calc_summary_stats(plan.gen_data(theta_true)) )
+  dist = Array(Float64,(length(ss),num_draw))
+  for i in 1:num_draw
+    dist[:,i] = abs(ss.-plan.calc_summary_stats(plan.gen_data(theta)))
+  end
+  set_distance_scale(vec(median(dist,2)))
+end
+
 
 # Summary Stats & Distances based on Empirical CDF
 # using Distributions
@@ -103,11 +119,11 @@ function calc_dist_ks(x::EmpiricalUnivariateDistribution, y::EmpiricalUnivariate
    for v in x.values
      d = abs(cdf(x,v)-cdf(y,v))
      if d>maxd maxd = d end
-   end   
+   end
    for v in y.values
      d = abs(cdf(x,v)-cdf(y,v))
      if d>maxd maxd = d end
-   end   
+   end
    maxd
 end
 

@@ -35,14 +35,14 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          if dist_star < dist_best
             dist_best = dist_star
             theta_best = copy(theta_star)
-            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
-         else
-            push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
          end
 
          if(dist_best < epsilon)
+            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
             all_attempts = a
             break
+         else
+            push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
          end
       end
       if dist_best == Inf
