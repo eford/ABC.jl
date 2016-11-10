@@ -37,7 +37,7 @@ include("alg_parallel.jl")
 #include("alg_parallel_custom.jl")
 include("make_proposal.jl")
 include("log.jl")
-include("emulator.jl")
+#include("emulator.jl")
 
 end # module
 
