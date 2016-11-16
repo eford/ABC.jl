@@ -9,7 +9,9 @@ function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_fa
     println("tau = ", tau)
   end
   covar = PDMat(tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+  #sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+  max_maha_distsq = 4.0*size(theta_mean,1)
+  sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
 end
 
 function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
@@ -22,7 +24,9 @@ function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_fa
     println("tau = ", tau)
   end
   covar = PDiagMat(tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+  #sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+  max_maha_distsq = 4.0*size(theta_mean,1)
+  sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
 end
 
 function make_proposal_dist_gaussian_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )
