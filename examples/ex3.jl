@@ -36,7 +36,7 @@ theta_true = [0.3, 0.0, 1.0]
 
 # Tell ABC what it needs to know for a simulation
 abc_plan = abc_pmc_plan_type(gen_data,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; is_valid=is_valid_theta13_pos,num_max_attempt=10000, 
-   make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_diag_covar, param_active=[1,2]);
+   make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_diag_covar, param_active=[1,2], adaptive_quantiles=true);
 
 # Generate "true/observed data"
 data_true = gen_data(theta_true)   # Draw "real" data from same model as for analysis
@@ -44,7 +44,7 @@ ss_true = abc_plan.calc_summary_stats(data_true)
 #println("theta= ",theta_true," ss= ",ss_true, " d= ", 0.)
 
 # Run ABC simulation
-pop_out = run_abc(abc_plan,ss_true, verbose=true);
+@time pop_out = run_abc(abc_plan,ss_true, verbose=true);
 
 
 #=
@@ -71,4 +71,3 @@ levels = [exp(-0.5*i^2)/sqrt(2pi^num_param) for i in 0:5];
 PyPlot.contour(x,y,zz',levels);
 plot(pop_out.theta[1,:],pop_out.theta[2,:],".");
 =#
-

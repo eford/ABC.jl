@@ -16,7 +16,7 @@ immutable GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbst
         end
 		if( size(ic,1) != size(ic,2) )
 		    error("covariance matrix must be square")
-		end 
+		end
 		if( size(m,1) != size(ic,1) )
 		    error("means and covar matrix not compatible sizes: ",size(m)," vs ",size(ic) )
 		end
@@ -100,7 +100,7 @@ immutable GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCov
         end
 		if( size(ic,1) != size(ic,2) )
 		    error("covariance matrix must be square")
-		end 
+		end
         @assert(1<=length(pact)<=length(p))
         for idx in pact
             if !(1<=idx<=length(p))
