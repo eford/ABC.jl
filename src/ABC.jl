@@ -3,6 +3,8 @@ module ABC
 # package code goes here
 
 using Distributions
+using PDMats
+using DistributedArrays
 
 export
   # types 
@@ -19,14 +21,17 @@ export
   run_abc
 
 
+import StatsBase.sample
 import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
 
 # until added to distributions, use our own
 include("GaussianMixtureModelCommonCovar.jl")
+include("GaussianMixtureModelCommonCovarDiagonal.jl")
 
 include("types.jl")
 include("util.jl")
 include("alg.jl")
 
 end # module
+
