@@ -5,9 +5,9 @@ type abc_pmc_plan_saveable_type <: abc_plan_type
    calc_summary_stats::AbstractString
    calc_dist::AbstractString
    prior::Distribution
-   make_proposal_dist::String
-   normalize::String
-   is_valid::String
+   make_proposal_dist::AbstractString
+   normalize::AbstractString
+   is_valid::AbstractString
    num_part::Int64
    num_max_attempt::Int64
    num_max_attempt_valid::Int64
