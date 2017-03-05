@@ -47,11 +47,14 @@ function draw_indices(abc_log::ABC.abc_log_type, num_try_to_use::Integer; start:
   end
   idx_valid = find(all_good)
   num_sample = min(num_try_to_use,length(idx_valid))
-  @assert num_sample >=1
-  idx_sample = sort(sample(idx_valid,num_sample,replace=false))
-  #idx_sorted_dist = sortperm(abc_log.dist[idx_valid])
-  #idx_sample = idx_valid[idx_sorted_dist[1:num_sample]]
-  return idx_range[idx_sample]
+  if num_sample >=1
+    idx_sample = sort(sample(idx_valid,num_sample,replace=false))
+    #idx_sorted_dist = sortperm(abc_log.dist[idx_valid])
+    #idx_sample = idx_valid[idx_sorted_dist[1:num_sample]]
+    return idx_range[idx_sample]
+  else
+    return []
+  end
 end
 
 function draw_indicies_from_generations(accept_log::ABC.abc_log_type, reject_log::ABC.abc_log_type, generation_list::Vector{Int64}, num_use::Integer = 100)

@@ -1,9 +1,7 @@
 workspace()
-using PyPlot
 using ABC
 
 include("../examples/ex5_model5.jl")
-
 # Generate "true/observed data"
 #theta_true = draw_theta_valid(abc_plan,abc_plan.prior)
 data_true = gen_data(theta_true)   # Draw "real" data from same model as for analysis
@@ -13,24 +11,61 @@ ss_scale = abc_plan.calc_summary_stats(data_true).stddev + 1e-4
 ABC.set_distance_scale_max(abc_plan, theta_true, ss =ss_true )
 
 # Run ABC simulation
-abc_plan.target_epsilon = 20.0
-pop_init = init_abc(abc_plan,ss_true);
-@time pop_out = run_abc(abc_plan, ss_true, pop_init; verbose=true, print_every=1, ss_scale=ss_scale);
+target_epsilon_full = 1.0
+target_epsilon_emu = 1.0
+abc_plan.num_part = 50
 
+println("# Now computing initial population")
+@time pop_init = init_abc(abc_plan,ss_true);
+
+if true
+println("# Now training emulator")
 num_use = 100
-  (x_train,y_train) = ABC.make_training_data(pop_out.accept_log, pop_out.reject_log, collect(1:length(pop_out.accept_log.generation_starts_at)), num_use)
+  #(x_train,y_train) = ABC.make_training_data(pop_out.accept_log, pop_out.reject_log, collect(1:length(pop_out.accept_log.generation_starts_at)), num_use)
+  (x_train,y_train) = ABC.make_training_data(pop_init.accept_log, pop_init.reject_log, collect(1:length(pop_init.accept_log.generation_starts_at)), num_use)
   #emu = ABC.train_gp(x_train,y_train)
-  emu = ABC.optimize_gp_cor(x_train, y_train.mean,[ss_scale[i]^2 for i in 1:length(ss_scale), j in 1:size(x_train,2) ], param_init=[2.0,5.0])
-  #emu = ABC.train_gp(x_train,y_train,sigmasq_cor=opt_out.minimum[1],rho=opt_out.minimum[2])
+  #emu = ABC.optimize_gp_cor(x_train, y_train.mean,[ss_scale[i]^2 for i in 1:length(ss_scale), j in 1:size(x_train,2) ], param_init=[2.0,5.0])
+  emu = ABC.train_gp(x_train,y_train,sigmasq_cor=2.0,rho=5.0)
+end
 
+println("# Now running with emulator")
 abc_plan_emu = deepcopy(abc_plan)
 abc_plan_emu.use_emulator = true
-abc_plan_emu.num_max_times = 50
-abc_plan_emu.target_epsilon = 2.0
+abc_plan_emu.num_max_times = 20
+abc_plan_emu.target_epsilon = target_epsilon_emu
 @time pop_emu = run_abc(abc_plan_emu, ss_true, pop_init; verbose=true, print_every=1, ss_scale=ss_scale);
 
+#quit()
+
+println("# Now running without emulator")
+abc_plan.target_epsilon = target_epsilon_full
+abc_plan_emu.use_emulator = false
+abc_plan.num_max_times = 20
+@time pop_out = run_abc(abc_plan, ss_true, pop_init; verbose=true, print_every=1, ss_scale=ss_scale);
+
+num_plot = 200
+if true
+println("# Now resampling with emulator")
+@time (theta_emu, d_emu) = ABC.generate_abc_sample(abc_plan, pop_emu, ss_true, target_epsilon_emu, num_plot=num_plot);
+theta_mean = sum(theta_emu,2)/size(theta_emu,2)
+println("theta_mean = ",theta_mean)
+theta_stddev = sqrt(ABC.var_weighted(theta_emu'.-theta_mean',ones(size(theta_emu,2))))  # scaled, weighted covar for parameters
+println("theta_stddev = ",theta_stddev)
+end
+
+if true
+println("# Now resampling without emulator")
+@time (theta_out, d_out) = ABC.generate_abc_sample(abc_plan, pop_out, ss_true, target_epsilon_full, num_plot=num_plot);
+theta_mean = sum(theta_out,2)/size(theta_out,2)
+println("theta_mean = ",theta_mean)
+theta_stddev = sqrt(ABC.var_weighted(theta_out'.-theta_mean',ones(size(theta_out,2))))  # scaled, weighted covar for parameters
+println("theta_stddev = ",theta_stddev)
+end
+
+quit()
 ##=
-eps_thresh = maximum(pop_emu.dist)
+using PyPlot
+eps_thresh = maximum(pop_out.dist)
 idx_out = find(x->x<eps_thresh,pop_out.dist);
 plot_abc_posterior(pop_out.theta[:,idx_out],1,"r-")
 plot_abc_posterior(pop_out.theta[:,idx_out],2,"g-")
@@ -46,9 +81,11 @@ plot_abc_posterior(pop_emu.theta[:,idx_emu],4,"m.")
 plot_abc_posterior(pop_emu.theta[:,idx_emu],5,"c.")
 ###=#
 
+#=
 abc_plan_emu2 = deepcopy(abc_plan)
 abc_plan_emu.use_emulator = false
 abc_plan_emu.num_max_times = 1
+abc_plan_emu.target_epsilon = target_epsilon_full
 pop_emu2 = run_abc(abc_plan_emu2, ss_true, pop_emu2; verbose=true, print_every=1, ss_scale=ss_scale);
 
 idx_emu2 = find(x->x<eps_thresh,pop_emu2.dist)
@@ -57,11 +94,12 @@ plot_abc_posterior(pop_emu2.theta[:,idx_emu2],2,"g+")
 plot_abc_posterior(pop_emu2.theta[:,idx_emu2],3,"b+")
 plot_abc_posterior(pop_emu2.theta[:,idx_emu2],4,"m+")
 plot_abc_posterior(pop_emu2.theta[:,idx_emu2],5,"c+")
+=#
 
 num_plot = 100
 (theta_out, d_out) = ABC.generate_abc_sample(abc_plan, pop_out, ss_true, eps_thresh, num_plot=num_plot);
 (theta_emu, d_emu) = ABC.generate_abc_sample(abc_plan, pop_emu, ss_true, eps_thresh, num_plot=num_plot);
-(theta_emu2, d_emu2) = ABC.generate_abc_sample(abc_plan, pop_emu2, ss_true, eps_thresh, num_plot=num_plot);
+#(theta_emu2, d_emu2) = ABC.generate_abc_sample(abc_plan, pop_emu2, ss_true, eps_thresh, num_plot=num_plot);
 
 plot_abc_posterior(theta_out,1,"r-")
 plot_abc_posterior(theta_out,2,"g-")
@@ -69,18 +107,19 @@ plot_abc_posterior(theta_out,3,"b-")
 plot_abc_posterior(theta_out,4,"m-")
 plot_abc_posterior(theta_out,5,"c-")
 
+#=
 plot_abc_posterior(theta_emu2,1,"r.")
 plot_abc_posterior(theta_emu2,2,"g.")
 plot_abc_posterior(theta_emu2,3,"b.")
 plot_abc_posterior(theta_emu2,4,"m.")
 plot_abc_posterior(theta_emu2,5,"c.")
+=#
 
 plot_abc_posterior(theta_emu,1,"r+")
 plot_abc_posterior(theta_emu,2,"g+")
 plot_abc_posterior(theta_emu,3,"b+")
 plot_abc_posterior(theta_emu,4,"m+")
 plot_abc_posterior(theta_emu,5,"c+")
-
 
 
 

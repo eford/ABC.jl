@@ -86,7 +86,7 @@ function detection_prob_snr_term(snr::Real) # Detection probability as a functio
   detected = trues(n)
   for i in 1:n
     period = period_snr[1,i]
-    snr = period_snr[2,i]^2
+    snr = period_snr[2,i]
     prob_detect = detection_prob( period, snr )
     if rand() > prob_detect
       detected[i] = false
@@ -158,7 +158,7 @@ proposal(pop::abc_population_type, tau_factor::Float64) = ABC.make_proposal_dist
 #gen_data = gen_period_snr_detected_snr_only
 #num_star_default = 4000   # How many "planets" to include in universe
 gen_data = gen_period_snr_detected_snr_and_geo
-num_star_default = 20000   # How many "planets" to include in universe
+num_star_default = 160000   # How many "planets" to include in universe
 
 #=
 ex_data =gen_data(theta_true)
