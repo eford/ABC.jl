@@ -201,26 +201,6 @@ function optimize_gp_cor{T<:Real}(x::AbstractArray{T,2}, y::AbstractArray{T,2}, 
   return emulator
 end
 
-#=  corlist = [0.001,0.003,0.01,0.03,0.1,0.3,1.0,3.0,10.]
-  rholist = [0.001,0.003,0.01,0.03,0.1,0.3,1.0,3.0,10.]
-  cor_best = 0.0
-  rho_best = 0.0
-  marginal_best = -Inf
-  for i in 1:length(corlist)
-  for j in 1:length(rholist)
-      marg = calc_marginal([corlist[i],rholist[j]])
-      println("# sigma_c=",corlist[i], " rho=",rholist[j]," logp=",marg)
-      if marg > marginal_best
-        cor_best = corlist[i]
-        rho_best = rholist[j]
-        marginal_best = marg
-      end
-    end
- end
- println("# Max GP marginal at: ",cor_best," ", rho_best)
- train_gp(x,y,sigmasq_y,kernel=kernel,sigmasq_cor=cor_best,rho=rho_best)
-end
- =#
 
 function predict_gp{T<:Real}(emulator::emulator_gp_type, x_star::AbstractArray{T,2};
          sigmasq_obs::Array{T,1} = zeros(T,(size(emulator.output_train,1))) )
@@ -234,7 +214,7 @@ function predict_gp_mean{T<:Real}(emulator::emulator_gp_type, x_star::AbstractAr
   predict_gp_mean(emulator,x_star,sigmasq_obs_x_star)
 end
 
-  function predict_gp{T<:Real}(emulator::emulator_gp_type, x_star::AbstractArray{T,2}, sigmasq_obs::Array{T,2} )
+function predict_gp{T<:Real}(emulator::emulator_gp_type, x_star::AbstractArray{T,2}, sigmasq_obs::Array{T,2} )
   Sigma_c = make_kernel_data(emulator.input_train,x_star,emulator.kernel,param_means=emulator.input_means,param_covar=emulator.input_covar,sigmasq_cor=emulator.sigmasq_cor,rho=emulator.rho)
   Sigma_pred = make_kernel_data(x_star,emulator.kernel,param_means=emulator.input_means,param_covar=emulator.input_covar,sigmasq_cor=emulator.sigmasq_cor,rho=emulator.rho)
   num_outputs = size(emulator.output_train,1)
@@ -242,7 +222,7 @@ end
   predict_covar = Array(T,(num_outputs,size(x_star,2),size(x_star,2)))
   for i in 1:num_outputs
     predict_mean[i,:] = Sigma_c' * (emulator.Sigma_train[i] \ (emulator.output_train[i,:].-emulator.output_means[i])) .+ emulator.output_means[i]
-    # TODO WARNING Update how sigmasq_obs is calculated
+    # TODO WARNING Update how sigmasq_obs is calculated to include covariances
     predict_covar[i,:,:] = Sigma_pred - Sigma_c' * (emulator.Sigma_train[i] \ Sigma_c)+ diagm(sigmasq_obs[i,:])
   end
   #=
@@ -254,7 +234,7 @@ end
   return (predict_mean, predict_covar)
 end
 
-  function predict_gp_mean{T<:Real}(emulator::emulator_gp_type, x_star::AbstractArray{T,2}, sigmasq_obs::Array{T,2} )
+function predict_gp_mean{T<:Real}(emulator::emulator_gp_type, x_star::AbstractArray{T,2}, sigmasq_obs::Array{T,2} )
   Sigma_c = make_kernel_data(emulator.input_train,x_star,emulator.kernel,param_means=emulator.input_means,param_covar=emulator.input_covar,sigmasq_cor=emulator.sigmasq_cor,rho=emulator.rho)
   Sigma_pred = make_kernel_data(x_star,emulator.kernel,param_means=emulator.input_means,param_covar=emulator.input_covar,sigmasq_cor=emulator.sigmasq_cor,rho=emulator.rho)
   num_outputs = size(emulator.output_train,1)
@@ -262,7 +242,7 @@ end
   predict_covar = Array(T,(num_outputs,size(x_star,2),size(x_star,2)))
   for i in 1:num_outputs
     predict_mean[i,:] = Sigma_c' * (emulator.Sigma_train[i] \ (emulator.output_train[i,:].-emulator.output_means[i])) .+ emulator.output_means[i]
-    # TODO WARNING Update how sigmasq_obs is calculated
+    # TODO WARNING Update how sigmasq_obs is calculated to include covariances
     predict_covar[i,:,:] = Sigma_pred - Sigma_c' * (emulator.Sigma_train[i] \ Sigma_c)+ diagm(sigmasq_obs[i,:])
   end
   #=
