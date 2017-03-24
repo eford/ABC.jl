@@ -1,6 +1,8 @@
 using ABC
 using Distributions
 
+srand(1234)
+
 # Set Prior for Population Parameters
 theta_true = [0.0, 1.0]
 param_prior = Distributions.MvNormal(theta_true,ones(length(theta_true)))
