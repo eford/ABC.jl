@@ -18,8 +18,8 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
-            #theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
-            theta_star = [theta_star]
+            theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
+            #theta_star = [theta_star]
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end

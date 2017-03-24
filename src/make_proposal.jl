@@ -1,4 +1,4 @@
-function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 0.0)
+function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 4.0)
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
   tau = tau_factor*make_matrix_pd(rawtau)
@@ -18,7 +18,7 @@ function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_fa
   return sampler
 end
 
-function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 0.0 )
+function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 4.0 )
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   tau = tau_factor*var_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
   if verbose
