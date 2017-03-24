@@ -141,7 +141,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
 end
 
 # run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previosu call)
-function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = plan.in_parallel )
+function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, write_log_file::Bool = true, log_filename::String="test.log", in_parallel::Bool = plan.in_parallel )
   attempts = zeros(Int64,plan.num_part)
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
@@ -150,7 +150,9 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   mean_arr = []
   std_arr = []
   med_arr = []
-  out_log = open("test.log", "w")
+  if write_log_file
+    out_log = open(log_filename, "w")
+  end
   for t in 1:plan.num_max_times
     local new_pop
     sampler = plan.make_proposal_dist(pop, plan.tau_factor)
@@ -171,9 +173,11 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
        # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
        println("Mean(theta)= ", reshape(mean(pop.theta,2),(1,size(pop.theta,1))), " Std. Dev.(theta)= ", reshape(std(pop.theta,2),(1,size(pop.theta,1))))
 
-       write(out_log, "# t= ",string(t), " eps= ",string(epsilon), " med(d)= ",string(median(pop.dist)), " attempts= ",string(median(attempts)), " ",string(maximum(attempts)), " reps= ", string(sum(pop.repeats)), " ess= ",string(ess(pop.weights)), "\n") #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
-       write(out_log, "Mean(theta)= ", string(reshape(mean(pop.theta,2),(1,size(pop.theta,1)))), " Std. Dev.(theta)= ", string(reshape(std(pop.theta,2),(1,size(pop.theta,1)))), "\n")
-       flush(out_log)
+       if write_log_file
+         write(out_log, "# t= ",string(t), " eps= ",string(epsilon), " med(d)= ",string(median(pop.dist)), " attempts= ",string(median(attempts)), " ",string(maximum(attempts)), " reps= ", string(sum(pop.repeats)), " ess= ",string(ess(pop.weights)), "\n") #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
+         write(out_log, "Mean(theta)= ", string(reshape(mean(pop.theta,2),(1,size(pop.theta,1)))), " Std. Dev.(theta)= ", string(reshape(std(pop.theta,2),(1,size(pop.theta,1)))), "\n")
+         flush(out_log)
+       end
     end
     push!(eps_arr, epsilon)
     push!(mean_arr, mean(pop.theta,2)[1])
@@ -201,11 +205,13 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   println("Distance history = ", med_arr)
   println("Mean history = ", mean_arr)
   println("Std. Dev. history = ", std_arr)
-  write(out_log, "Epsilon history = ", eps_arr, "\n")
-  write(out_log, "Distance history = ", med_arr, "\n")
-  write(out_log, "Mean history = ", mean_arr, "\n")
-  write(out_log, "Std. Dev. history = ", std_arr, "\n")
-  close(out_log)
+  if write_log_file
+    write(out_log, "Epsilon history = ", eps_arr, "\n")
+    write(out_log, "Distance history = ", med_arr, "\n")
+    write(out_log, "Mean history = ", mean_arr, "\n")
+    write(out_log, "Std. Dev. history = ", std_arr, "\n")
+    close(out_log)
+  end
   return pop
 end
 
