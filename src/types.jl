@@ -1,13 +1,13 @@
 abstract abc_plan_type
 
 type abc_pmc_plan_saveable_type <: abc_plan_type
-   gen_data::String
-   calc_summary_stats::String
-   calc_dist::String
+   gen_data::AbstractString
+   calc_summary_stats::AbstractString
+   calc_dist::AbstractString
    prior::Distribution
-   make_proposal_dist::String
-   normalize::String
-   is_valid::String
+   make_proposal_dist::AbstractString
+   normalize::AbstractString
+   is_valid::AbstractString
    num_part::Int64
    num_max_attempt::Int64
    num_max_attempt_valid::Int64
@@ -60,7 +60,7 @@ type abc_pmc_plan_type <: abc_plan_type
      epsilon_init::Float64 = 1.0, init_epsilon_quantile::Float64 = 0.75, epsilon_reduction_factor::Float64 = 0.9,
      target_epsilon::Float64 = 0.01, tau_factor::Float64 = 2.0,
      adaptive_quantiles::Bool = false, stop_on_decreasing_efficiency::Bool = false,
-     save_params::Bool = true, save_summary_stats::Bool = true, save_distances::Bool = true, frac_rejects_save::Float64 = 0.0, in_parallel::Bool = false)
+     save_params::Bool = true, save_summary_stats::Bool = false, save_distances::Bool = true, frac_rejects_save::Float64 = 0.0, in_parallel::Bool = false)
      @assert(num_part>=length(Distributions.rand(p)))
      @assert(num_max_attempt>=1)
      @assert(num_max_attempt_valid>=1)

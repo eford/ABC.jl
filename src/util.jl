@@ -10,7 +10,6 @@ copy(x::abc_population_type) = abc_population_type(copy(x.theta),copy(x.weights)
 function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )
   @assert(size(x,1)==length(w) )
   sumw = sum(w)
-  @assert( sumw > 0. )
   if(sumw!= 1.0) 
      w /= sum(w)
      sumw = 1.0
@@ -110,8 +109,5 @@ function calc_dist_ks(x::EmpiricalUnivariateDistribution, y::EmpiricalUnivariate
    end   
    maxd
 end
-
-
-
 
 
