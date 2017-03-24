@@ -1,4 +1,4 @@
-function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
+function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 0.0)
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   rawtau = cov_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
   tau = tau_factor*make_matrix_pd(rawtau)
@@ -9,12 +9,16 @@ function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_fa
     println("tau = ", tau)
   end
   covar = PDMat(tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
-  #max_maha_distsq = 4.0*size(theta_mean,1)
-  #sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
+  if max_maha_distsq_per_dim > 0
+    max_maha_distsq = max_maha_distsq_per_dim*size(theta_mean,1)
+    sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
+  else
+    sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+  end
+  return sampler
 end
 
-function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing)
+function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 0.0 )
   theta_mean = sum(pop.theta.*pop.weights') # weighted mean for parameters
   tau = tau_factor*var_weighted(pop.theta'.-theta_mean,pop.weights)  # scaled, weighted covar for parameters
   if verbose
@@ -24,9 +28,12 @@ function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_fa
     println("tau = ", tau)
   end
   covar = PDiagMat(tau)
-  sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
-  #max_maha_distsq = 4.0*size(theta_mean,1)
-  #sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
+  if max_maha_distsq_per_dim > 0
+    max_maha_distsq = max_maha_distsq_per_dim*size(theta_mean,1)
+    sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
+  else
+    sampler = GaussianMixtureModelCommonCovar(pop.theta,pop.weights,covar)
+  end
 end
 
 function make_proposal_dist_gaussian_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )

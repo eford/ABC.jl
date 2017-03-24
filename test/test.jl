@@ -1,6 +1,7 @@
 using ABC
 using Distributions
 
+srand(123)
 include("test1.jl")
 err_code = test1()
 if err_code !=0 
