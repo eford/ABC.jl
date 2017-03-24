@@ -18,7 +18,8 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
-            theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
+            #theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
+            theta_star = [theta_star]
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
@@ -273,7 +274,7 @@ function update_abc_pop_parallel_pmap(plan::abc_pmc_plan_type, ss_true, pop::abc
          @inbounds new_pop.theta[:,i] = pop.theta[:,i]
          @inbounds new_pop.dist[i] = pop.dist[i]
          @inbounds new_pop.weights[i] = pop.weights[i]
-         @inbounds new_pop.repeats[i] += 1
+         @inbounds new_pop.repeats[i] = 1
        end
      end # i / num_parts
    new_pop.weights ./= sum(new_pop.weights)
@@ -413,7 +414,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     local new_pop
     sampler = plan.make_proposal_dist(pop, plan.tau_factor)
     if plan.adaptive_quantiles
-      min_quantile = t==1 ? 4.0/size(pop.theta,2) : 1.0/sqrt(size(pop.theta,2))
+      min_quantile = t==1 ? 4.0/size(pop.theta,2) : 0.5 # 1.0/sqrt(size(pop.theta,2))
       epsilon = choose_epsilon_adaptive(pop, sampler, min_quantile=min_quantile)
     end
     if in_parallel
