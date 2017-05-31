@@ -30,8 +30,11 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          end
 
          if(dist_best < epsilon)
+            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
             all_attempts = a
             break
+         else
+            push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
          end
          if(valid_attempts>=num_max_attempt_valid)
             all_attempts = a
