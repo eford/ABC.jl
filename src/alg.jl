@@ -19,6 +19,7 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
             theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
+            #theta_star = [theta_star]
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
@@ -70,13 +71,13 @@ end
 # Generate initial abc population from prior, aiming for d(ss,ss_true)<epsilon
 function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = plan.in_parallel)
   if in_parallel
-   nw = nworkers()
-   @assert (nw > 1)
-   #@assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
-   #return init_abc_parallel_map(plan,ss_true)
-   return init_abc_distributed_map(plan,ss_true)
+    nw = nworkers()
+    @assert (nw > 1)
+    #@assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
+    #return init_abc_parallel_map(plan,ss_true)
+    return init_abc_distributed_map(plan,ss_true)
   else
-   return init_abc_serial(plan,ss_true)
+    return init_abc_serial(plan,ss_true)
   end
 end
 
@@ -400,15 +401,13 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
    return new_pop
 end
 
-# run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previosu call)
+# run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previous call)
 function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = plan.in_parallel )
   attempts = zeros(Int64,plan.num_part)
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
   eps_diff_count = 0
-  mean_arr = []
-  std_arr = []
-  eps_arr = []
+
   for t in 1:plan.num_max_times
     local new_pop
     sampler = plan.make_proposal_dist(pop, plan.tau_factor)
@@ -428,6 +427,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
        println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
        # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
+      println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
     end
     push!(eps_arr, epsilon)
     push!(mean_arr, mean(pop.theta,2)[1])
@@ -457,12 +457,13 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     if eps_diff_count > 1
       println("# Halting due to epsilon not improving significantly for 3 consecutive generations.")
       break
-    end
-  end # t / num_times
+    end  end # t / num_times
   #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
-  println("Epsilon history = ", eps_arr)
-  println("Mean history = ", mean_arr)
-  println("Std Dev. history = ", std_arr)
+  if verbose
+     #println("Epsilon history = ", eps_arr)
+     #println("Mean history = ", mean_arr)
+     #println("Std Dev. history = ", std_arr)
+  end
   return pop
 end
 

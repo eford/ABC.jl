@@ -1,17 +1,17 @@
 # using Distributions
 
 immutable GaussianMixtureModelCommonCovarDiagonal <: Distribution
-	mu::Array{Float64,2}
-	probs::Vector{Float64}
-	covar::Vector{Float64}
+    mu::Array{Float64,2}
+    probs::Vector{Float64}
+    covar::Vector{Float64}
     aliastable::Distributions.AliasTable
     function GaussianMixtureModelCommonCovarDiagonal(m::Array{Float64,2}, p::Vector{Float64}, ic::Vector{Float64})
         if size(m,2) != length(p)
             error("means and probs must have the same number of elements")
         end
-		if( size(m,1) != size(ic,1) )
-		    error("means and covar matrix not compatible sizes: ",size(m)," vs ",size(ic) )
-		end
+if( size(m,1) != size(ic,1) )
+    error("means and covar matrix not compatible sizes: ",size(m)," vs ",size(ic) )
+end
         sump = 0.0
         for i in 1:length(p)
             if p[i] < 0.0
@@ -26,7 +26,7 @@ end
 
 function mean(d::GaussianMixtureModelCommonCovarDiagonal)
     np = size(d.mu,2)
-	m = zeros(np)
+    m = zeros(np)
     for i in 1:length(d.probs)
         m += vec(d.mu[:,i]) .* d.probs[i]
     end

@@ -5,6 +5,7 @@ module ABC
 using Distributions
 using PDMats
 using DistributedArrays
+using Compat
 
 export
   # types
@@ -24,6 +25,7 @@ export
 import StatsBase.sample
 import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
+import Compat.String
 
 # until added to distributions, use our own
 include("GaussianMixtureModelCommonCovar.jl")
