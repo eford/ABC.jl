@@ -46,7 +46,7 @@ function init_abc_distributed_map(plan::abc_pmc_plan_type, ss_true)
   weights = fill(1.0/plan.num_part,plan.num_part)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
   #return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
-  return abc_population_type(theta,weights,dist_theta,logpriorvals,accept_log_combo,reject_log_combo)
+  return abc_population_type(theta,weights,dist_theta,plan.epsilon_init,logpriorvals,accept_log_combo,reject_log_combo)
 end
 
 function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
@@ -97,8 +97,8 @@ function init_abc_parallel_map(plan::abc_pmc_plan_type, ss_true)
 
   weights = fill(1.0/plan.num_part,plan.num_part)
   logpriorvals = Distributions.logpdf(plan.prior,theta)
-  #return abc_population_type(theta,weights,dist_theta,logpriorvals,summary_stat_log_combo)
-  return abc_population_type(theta,weights,dist_theta,logpriorvals,accept_log_combo,reject_log_combo)
+  #return abc_population_type(theta,weights,dist_theta,plan.epsilon_init,logpriorvals,summary_stat_log_combo)
+  return abc_population_type(theta,weights,dist_theta,plan.epsilon_init,logpriorvals,accept_log_combo,reject_log_combo)
 end
 
 # Update the abc population once
