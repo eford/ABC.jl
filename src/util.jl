@@ -4,7 +4,7 @@ noop(x::Real) = return true
 
 # Copy population
 import Base.copy
-copy(x::abc_population_type) = abc_population_type(copy(x.theta),copy(x.weights),copy(x.dist), copy(x.repeats))
+copy(x::abc_population_type) = abc_population_type(copy(x.theta),copy(x.weights),copy(x.dist), x.epsilon, copy(x.repeats))
 
 # Compute weighted covariance of sample (from origin)
 function cov_weighted(x::Array{Float64,2}, w::Array{Float64,1} )

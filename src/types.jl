@@ -1,13 +1,13 @@
 abstract abc_plan_type
 
 type abc_pmc_plan_saveable_type <: abc_plan_type
-   gen_data::String
-   calc_summary_stats::String
-   calc_dist::String
+   gen_data::Compat.ASCIIString
+   calc_summary_stats::Compat.ASCIIString
+   calc_dist::Compat.ASCIIString
    prior::Distribution
-   make_proposal_dist::String
-   normalize::String
-   is_valid::String
+   make_proposal_dist::Compat.ASCIIString
+   normalize::Compat.ASCIIString
+   is_valid::Compat.ASCIIString
    num_part::Int64
    num_max_attempt::Int64
    num_max_attempt_valid::Int64
@@ -89,16 +89,17 @@ type abc_log_type   # Not implemented yet
    theta::Array{Array{Float64,1},1}
    ss::Array{Any,1}
    dist::Array{Float64,1}
+   epsilon::Array{Float64,1}
    generation_starts_at::Array{Int64,1}
 
-   function abc_log_type(t::Array{Array{Float64,1},1}, ss::Array{Any,1}, d::Array{Float64,1}, gsa::Array{Int64,1} = ones(Int64,1))
-      @assert length(t) == length(ss) == length(d)
-      new( t, ss, d, gsa )
+   function abc_log_type(t::Array{Array{Float64,1},1}, ss::Array{Any,1}, d::Array{Float64,1}, eps::Array{Float64,1}, gsa::Array{Int64,1} = ones(Int64,1))
+      @assert length(t) == length(ss) == length(d) == length(eps)
+      new( t, ss, d, eps, gsa )
    end
 end
 
 function abc_log_type()
-   abc_log_type( Array(Array{Float64,1},0), Array(Any,0), Array(Float64,0), Array(Int64,0) )
+   abc_log_type( Array(Array{Float64,1},0), Array(Any,0), Array(Float64,0), Array(Float64,0), Array(Int64,0) )
 end
 
 
@@ -119,17 +120,19 @@ type abc_population_type
    theta::Array{Float64,2}
    weights::Array{Float64,1}
    dist::Array{Float64,1}
+   epsilon::Float64
    logpdf::Array{Float64,1}
    accept_log::abc_log_type
    reject_log::abc_log_type
    repeats::Array{Int64,1}
 
-   function abc_population_type(t::Array{Float64,2}, w::Array{Float64,1}, d::Array{Float64,1}, lp::Array{Float64,1} = ones(Float64,length(w))/length(w), la::abc_log_type = abc_log_type(), lr::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,length(w)) )
+   function abc_population_type(t::Array{Float64,2}, w::Array{Float64,1}, d::Array{Float64,1}, eps::Float64, lp::Array{Float64,1} = ones(Float64,length(w))/length(w), la::abc_log_type = abc_log_type(), lr::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,length(w)) )
       @assert(length(w)==length(d)==length(lp)==size(t,2)==length(repeats))
-      new(t,w,d,lp,la,lr,repeats)
+      new(t,w,d,eps,lp,la,lr,repeats)
    end
 end
 
 function abc_population_type(num_param::Integer, num_particles::Integer; accept_log::abc_log_type = abc_log_type(), reject_log::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,num_particles) )
-   abc_population_type(zeros(num_param,num_particles), zeros(num_particles), zeros(num_particles), ones(Float64,num_particles)/num_particles, accept_log, reject_log, repeats)
+   abc_population_type(zeros(num_param,num_particles), zeros(num_particles), zeros(num_particles), 0.0, ones(Float64,num_particles)/num_particles, accept_log, reject_log, repeats)
 end
+

@@ -1,6 +1,6 @@
 #include("alg_parallel_custom.jl")   # Demo of using @spawn and fetch to reduce memory usage
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
-      @assert(epsilon>0.0)
+      @assert(epsilon>=0.0)
       dist_best = Inf
       local theta_best
       #summary_stats_log = abc_log_type()
@@ -14,7 +14,8 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
       for a in 1:num_max_attempt
          theta_star = rand(sampler)
          if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
-            theta_star = [theta_star]
+            theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
+            #theta_star = [theta_star]
          end
          plan.normalize(theta_star)
          if(!plan.is_valid(theta_star)) continue end
@@ -66,13 +67,13 @@ end
 # Generate initial abc population from prior, aiming for d(ss,ss_true)<epsilon
 function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = plan.in_parallel)
   if in_parallel
-   nw = nworkers()
-   @assert (nw > 1)
-   #@assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
-   #return init_abc_parallel_map(plan,ss_true)
-   return init_abc_distributed_map(plan,ss_true)
+    nw = nworkers()
+    @assert (nw > 1)
+    #@assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
+    #return init_abc_parallel_map(plan,ss_true)
+    return init_abc_distributed_map(plan,ss_true)
   else
-   return init_abc_serial(plan,ss_true)
+    return init_abc_serial(plan,ss_true)
   end
 end
 
@@ -392,14 +393,17 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
        end
      end # i / num_parts
    new_pop.weights ./= sum(new_pop.weights)
+   #println("New pop weights = ", new_pop.weights)
    return new_pop
 end
 
-# run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previosu call)
+# run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previous call)
 function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = plan.in_parallel )
   attempts = zeros(Int64,plan.num_part)
   # Set initial epsilon tolerance based on current population
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
+  eps_diff_count = 0
+
   for t in 1:plan.num_max_times
     local new_pop
     sampler = plan.make_proposal_dist(pop, plan.tau_factor)
@@ -418,6 +422,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     if verbose && (t%print_every == 0)
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
        # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
+      println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
     end
     #if epsilon < plan.target_epsilon  # stop once acheive goal
     if maximum(pop.dist) < plan.target_epsilon  # stop once acheive goal
@@ -432,11 +437,25 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
       println("# Halting due to ", sum(pop.repeats), " repeats.")
       break
     end
+    eps_old = epsilon
     if maximum(attempts)<0.75*plan.num_max_attempt
       epsilon = minimum([maximum(pop.dist),epsilon * plan.epsilon_reduction_factor])
     end
-  end # t / num_times
+    if ((abs(eps_old-epsilon)/epsilon) < 1.0e-5)
+      eps_diff_count += 1
+    else
+      eps_diff_count = 0
+    end
+    if eps_diff_count > 1
+      println("# Halting due to epsilon not improving significantly for 3 consecutive generations.")
+      break
+    end  end # t / num_times
   #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
+  if verbose
+     #println("Epsilon history = ", eps_arr)
+     #println("Mean history = ", mean_arr)
+     #println("Std Dev. history = ", std_arr)
+  end
   return pop
 end
 
