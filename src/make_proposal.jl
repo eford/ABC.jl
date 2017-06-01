@@ -29,7 +29,7 @@ function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_fa
     println("tau = ", tau)
   end
   covar = PDiagMat(tau)
-  sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
+  max_maha_distsq = 4.0*size(theta_mean,1)
   if max_maha_distsq_per_dim > 0
       max_maha_distsq = max_maha_distsq_per_dim*size(theta_mean,1)
       sampler = GaussianMixtureModelCommonCovarTruncated(pop.theta,pop.weights,covar,max_maha_distsq)
