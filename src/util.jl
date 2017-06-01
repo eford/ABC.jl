@@ -99,8 +99,8 @@ function set_distance_scale(ds::Array{Float64,1})
   global dist_scale
   dist_scale = copy(ds)
 end
-function set_distance_scale(plan::abc_pmc_plan_type, theta::Array{Float64,1}; num_draw::Integer = 40,
-                  ss::Array{Float64,1} = plan.calc_summary_stats(plan.gen_data(theta_true)) )
+function set_distance_scale{T}(plan::abc_pmc_plan_type, theta::Array{Float64,1}; num_draw::Integer = 40,
+                  ss::Array{T,1} = plan.calc_summary_stats(plan.gen_data(theta)) )
   dist = Array(Float64,(length(ss),num_draw))
   for i in 1:num_draw
     dist[:,i] = abs(ss.-plan.calc_summary_stats(plan.gen_data(theta)))

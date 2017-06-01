@@ -139,7 +139,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          @inbounds new_pop.weights[i] = pop.weights[i]
          @inbounds new_pop.logpdf[i] = pop.logpdf[i]
          =#
-         @inbounds new_pop.repeats[i] = 1
+         @inbounds new_pop.repeats[i] += 1
        end
      end # i / num_parts
    new_pop.weights ./= sum(new_pop.weights)
