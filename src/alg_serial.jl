@@ -1,76 +1,15 @@
-function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt, num_max_attempt_valid = plan.num_max_attempt_valid )
-      @assert(epsilon>=0.0)
-      dist_best = Inf
-      local theta_best
-      accept_log = abc_log_type()
-      reject_log = abc_log_type()
-      push!(accept_log.generation_starts_at, 1)
-      push!(reject_log.generation_starts_at, 1)
-      valid_attempts = 0
-      all_attempts = num_max_attempt
-      for a in 1:num_max_attempt
-         theta_star = rand(sampler)
-         if issubtype(typeof(theta_star),Real)   # in case return a scalar, make into array
-            #theta_star = [theta_star]
-            theta_star = fill(theta_star, length(plan.prior))  ### TODO: Univariate uniform prior returns length 1 -> need to generalize for multiple bins.
-         end
-         plan.normalize(theta_star)
-         if(!plan.is_valid(theta_star)) continue end
-         valid_attempts += 1
-         data_star = plan.gen_data(theta_star)
-         ss_star = plan.calc_summary_stats(data_star)
-         dist_star = plan.calc_dist(ss_true,ss_star)
-         if dist_star < dist_best
-            dist_best = dist_star
-            theta_best = copy(theta_star)
-            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
-         else
-            if rand()<plan.frac_rejects_save
-              push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
-            end
-         end
-
-         if(dist_best < epsilon)
-            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
-            all_attempts = a
-            break
-         else
-            push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
-         end
-         if(valid_attempts>=num_max_attempt_valid)
-            all_attempts = a
-            break
-         end
-      end
-      if dist_best == Inf
-        error("# Failed to generate any acceptable thetas.")
-      end
-      # println("gen_theta: d= ",dist_best, " num_valid_attempts= ",valid_attempts, " num_all_attempts= ", all_attempts, " theta= ", theta_best)
-      return (theta_best, dist_best, valid_attempts, accept_log, reject_log)
-end
-
-function generate_abc_sample(sampler_plot::Distribution, num_param::Integer, ss_true, epsilon::Real; num_plot::Integer = 100)
-  theta_plot = Array(Float64,(num_param, num_plot))
-  dist_plot = Array(Float64,num_plot)
-  for i in 1:num_plot
-    theta_plot[:,i], dist_plot[i], attempts_plot, accept_log_plot, reject_log_plot = ABC.generate_theta(abc_plan, sampler_plot, ss_true, epsilon)
+function generate_abc_sample_serial(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Real; n::Integer = 100)
+  #num_param = length(Distributions.rand(plan.prior))
+  num_param = length(plan.prior)
+  theta_plot = Array(Float64,(num_param, n))
+  dist_plot = Array(Float64,n)
+  for i in 1:n
+    theta_plot[:,i], dist_plot[i], attempts_plot, accept_log_plot, reject_log_plot = ABC.generate_theta(abc_plan, sampler, ss_true, epsilon)
   end
   return theta_plot, dist_plot
 end
 
 # Generate initial abc population from prior, aiming for d(ss,ss_true)<epsilon
-function init_abc(plan::abc_pmc_plan_type, ss_true; in_parallel::Bool = plan.in_parallel)
-  if in_parallel
-   nw = nworkers()
-   @assert (nw > 1)
-   #@assert (plan.num_part > 2*nw)  # Not really required, but seems more likely to be a mistake
-   #return init_abc_parallel_map(plan,ss_true)
-   return init_abc_distributed_map(plan,ss_true)
-  else
-   return init_abc_serial(plan,ss_true)
-  end
-end
-
 function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   num_param = length(Distributions.rand(plan.prior))
   # Allocate arrays
@@ -149,6 +88,7 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
    return new_pop
 end
 
+#=
 # run the ABC algorithm matching to summary statistics ss_true, starting from an initial population (e.g., output of previosu call)
 function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool = plan.in_parallel )
   attempts = zeros(Int64,plan.num_part)
@@ -164,7 +104,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     end
     if in_parallel
       #new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
-	    new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
+       new_pop = update_abc_pop_parallel_distributed_map(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
     else
 	  #new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
       new_pop = update_abc_pop_serial(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
@@ -211,27 +151,6 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   end
   return pop
 end
-
-function choose_epsilon_adaptive(pop::abc_population_type, sampler::Distribution; min_quantile::Real = 1.0/sqrt(size(pop.theta,2)) )
-  sampler_logpdf = logpdf(sampler, pop.theta)
-  target_quantile_this_itteration = min(1.0, exp(-maximum(sampler_logpdf .- pop.logpdf)) )
-  if target_quantile_this_itteration > 1.0
-     target_quantile_this_itteration = 1.0
-  end
-  optimal_target_quantile = target_quantile_this_itteration
-  if target_quantile_this_itteration < min_quantile
-     target_quantile_this_itteration = min_quantile
-  end
-  epsilon = quantile(pop.dist,target_quantile_this_itteration)
-  println("# Estimated target quantile is ", optimal_target_quantile, " using ",target_quantile_this_itteration, " resulting in epsilon = ", epsilon)
-  return epsilon
-end
-
-# run the ABC algorithm matching to summary statistics ss_true
-function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool =  plan.in_parallel )                                          # Initialize population, drawing from prior
-  pop::abc_population_type = init_abc(plan,ss_true, in_parallel=in_parallel)
-  #println("pop_init: ",pop)
-  run_abc(plan, ss_true, pop; verbose=verbose, print_every=print_every, in_parallel=in_parallel )  # Initialize population, drawing from prior
-end
+=#
 
 

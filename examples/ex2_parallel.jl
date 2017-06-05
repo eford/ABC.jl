@@ -26,6 +26,7 @@ import ABC; @everywhere using ABC
   data = Array(Float64,(3,n))
   data[1,:] = rand(Rayleigh(theta[1]),n)
   data[2:3,:] = rand(MvNormal(theta[2:3],ones(2)),n)
+  return data
 end
 
 # Function to adjust originally proposed model parameters, so that they will be valid 
@@ -44,7 +45,8 @@ end
 @everywhere theta_true = [0.3, 0.0, 1.0]
 
 # Tell ABC what it needs to know for a simulation
-@everywhere abc_plan = abc_pmc_plan_type(gen_data,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior, is_valid=is_valid_theta13_pos,num_max_attempt=10000);
+@everywhere in_parallel = length(workers()) > 1 ? true : false
+@everywhere abc_plan = abc_pmc_plan_type(gen_data,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior, is_valid=is_valid_theta13_pos,num_max_attempt=10000, in_parallel=in_parallel);
 
 # Generate "true/observed "data"
 data_true = gen_data(theta_true)   # Draw "real" data from same model as for analysis
@@ -52,7 +54,7 @@ ss_true = abc_plan.calc_summary_stats(data_true)
 #println("theta= ",theta_true," ss= ",ss_true, " d= ", 0.)
 
 # Run ABC simulation
-pop_out = run_abc(abc_plan,ss_true);
+@time pop_out = run_abc(abc_plan,ss_true,in_parallel=in_parallel);
 
 
 #=

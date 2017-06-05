@@ -89,9 +89,13 @@ end
 
 
 # Common summary stats and distances
-calc_summary_stats_mean_var(x::Array) = ( @inbounds m=mean(x); @inbounds v = varm(x,m); return [m, v] )
+function calc_summary_stats_mean_var(x::Array) 
+ @inbounds m = mean(x,2); 
+ @inbounds v = var(x,2,mean=vec(m)); 
+ return vcat(m, v)
+end
 
-calc_dist_max(x::Array{Float64,1},y::Array{Float64,1}) = maximum(abs(x.-y))
+calc_dist_max(x::Array{Float64},y::Array{Float64}) = maximum(abs(x.-y))
 dist_scale = Array(Float64,0)
 calc_scaled_dist_max(x::Array{Float64,1},y::Array{Float64,1}, scale::Array{Float64,1} = dist_scale) = maximum(abs(x.-y)./scale)
 

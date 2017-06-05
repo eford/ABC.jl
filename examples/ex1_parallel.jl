@@ -34,7 +34,7 @@ import ABC; @everywhere using ABC
 #println("theta= ",theta_true," ss= ",ss_true, " d= ", 0.)
 
 # Run ABC simulation
-@time pop_out = run_abc(abc_plan,ss_true;verbose=true);
+@time pop_out = run_abc(abc_plan,ss_true;verbose=true,in_parallel=in_parallel);
 
 
 #= 
