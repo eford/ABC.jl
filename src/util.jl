@@ -131,6 +131,10 @@ function calc_dist_ks(x::EmpiricalUnivariateDistribution, y::EmpiricalUnivariate
    maxd
 end
 
+function normalize_vector_of_log_values(x::Vector{Float64})
+      logsum = logsumexp(x)
+      param_vector = exp(param_vector-logsum)
+end
 
 
 
