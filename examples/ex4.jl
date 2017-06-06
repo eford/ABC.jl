@@ -206,7 +206,7 @@ plot_abc_posterior(pop_out.theta,6)
 sampler_plot = abc_plan.make_proposal_dist(pop_out, 1.0) # abc_plan.tau_factor)
 num_plot = 100
 epsilon = 0.05
-theta_plot, dist_plot = generate_abc_sample(sampler_plot,size(pop_out.theta, 1), ss_true, epsilon, num_plot=num_plot )
+theta_plot, dist_plot = generate_abc_sample(abc_plan,sampler_plot, ss_true, epsilon, n=num_plot )
 plot_abc_posterior(theta_plot,1)
 med_dist = median(dist_plot)
 plot_abc_posterior(theta_plot[:,find(dist_plot.<=med_dist)],1)
