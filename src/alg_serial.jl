@@ -56,9 +56,9 @@ function update_abc_pop_serial(plan::abc_pmc_plan_type, ss_true, pop::abc_popula
          @inbounds new_pop.dist[i] = dist_theta_star
          @inbounds new_pop.theta[:,i] = theta_star
          prior_logpdf = Distributions.logpdf(plan.prior,theta_star)
-         if isa(prior_logpdf, Array)   # TODO: Can remove this once Danley's code uses composite distribution
-            prior_logpdf = prior_logpdf[1]
-         end
+         #if isa(prior_logpdf, Array)   # TODO: Can remove this once Danley's code uses composite distribution
+         #   prior_logpdf = prior_logpdf[1]
+         #end
          # sampler_pdf calculation must match distribution used to update particle
          sampler_logpdf = logpdf(sampler, theta_star )
          #@inbounds new_pop.weights[i] = prior_pdf/sampler_pdf
