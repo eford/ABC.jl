@@ -4,6 +4,7 @@
 
 module CompositeDistributions
 
+using Compat
 if !isdefined(:Distributions) using Distributions end
 
 import Base.length, Base.mean, Base.show
@@ -20,8 +21,8 @@ export length, params, set_params!, mean, mode, var, cov, entropy
 export insupport, _logpdf, gradlogpdf, _rand!
 
 
-abstract AbstractCompositeContinuousDist <: ContinuousMultivariateDistribution
-#abstract AbstractCompositeDiscreteDist <: DiscreteMultivariateDistribution  # An idea, but not implemented yet
+@compat abstract type AbstractCompositeContinuousDist <: ContinuousMultivariateDistribution end
+#@compat abstract type AbstractCompositeDiscreteDist <: DiscreteMultivariateDistribution  end # An idea, but not implemented yet
 
 immutable GenericCompositeContinuousDist <: AbstractCompositeContinuousDist
     dist::Vector{ContinuousDistribution}
@@ -30,7 +31,7 @@ immutable GenericCompositeContinuousDist <: AbstractCompositeContinuousDist
     function GenericCompositeContinuousDist(dist::Vector{ContinuousDistribution})
       length(dist) > 0 || error("number of distributions must be positive")
       #@compat new(dist)
-      indices = Array(UnitRange{Int64},length(dist))
+      indices = Array{UnitRange{Int64}}(length(dist))
       idx_start = 1; idx_stop = 0
       for i in 1:length(dist)
          idx_stop += length(dist[i])
@@ -41,7 +42,8 @@ immutable GenericCompositeContinuousDist <: AbstractCompositeContinuousDist
     end
 end
 
-typealias CompositeDist  GenericCompositeContinuousDist
+#typealias CompositeDist  GenericCompositeContinuousDist
+const CompositeDist = GenericCompositeContinuousDist
 
 ### Parameters
 length(d::GenericCompositeContinuousDist, idx::Integer) = length(d.dist[idx])
@@ -50,7 +52,7 @@ length(d::GenericCompositeContinuousDist)  = d.indices[end].stop
 params(d::GenericCompositeContinuousDist, idx::Integer) = params(d.dist[idx])
 function params(d::GenericCompositeContinuousDist) 
   n = length(d)
-  p = Array(Tuple,n)
+  p = Array{Tuple}(n)
   for i in 1:length(d.dist)
      p[i] = params(d,i)
   end
@@ -85,7 +87,7 @@ end
 mean(d::GenericCompositeContinuousDist, idx::Integer) = mean(d.dist[idx])
 function mean(d::GenericCompositeContinuousDist) 
   n = length(d)
-  mu = Array(Float64,n)  
+  mu = Array{Float64}(n)  
   for i in 1:length(d.dist)
      mu[d.indices[i]] = mean(d,i)
   end
@@ -95,7 +97,7 @@ end
 mode(d::GenericCompositeContinuousDist, idx::Integer) = mode(d.dist[idx])
 function mode(d::GenericCompositeContinuousDist) 
   n = length(d)
-  mo = Array(Float64,n)
+  mo = Array{Float64}(n)
   for i in 1:length(d.dist)
      mo[d.indices[i]] = mode(d,i)
   end
@@ -105,7 +107,7 @@ end
 var(d::GenericCompositeContinuousDist, idx::Integer) = var(d.dist[idx])
 function var(d::GenericCompositeContinuousDist) 
   n = length(d)
-  v = Array(Float64,n)
+  v = Array{Float64}(n)
   for i in 1:length(d.dist)
      v[d.indices[i]] = var(d,i)
   end
@@ -167,7 +169,7 @@ function _logpdf{T<:Real}(d::GenericCompositeContinuousDist, x::AbstractArray{T,
 end
 
 function gradlogpdf{T<:Real}(d::GenericCompositeContinuousDist, x::DenseVector{T})
-    z = Array(T,length(d))
+    z = Array{T}(length(d))
     for i = 1:length(d.dist)
         z[index(d,i)] = gradlogpdf(d.dist[i],view(x,index(d,i)))
     end

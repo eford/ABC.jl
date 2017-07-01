@@ -1,8 +1,8 @@
 function generate_abc_sample_serial(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Real; n::Integer = 100)
   #num_param = length(Distributions.rand(plan.prior))
   num_param = length(plan.prior)
-  theta_plot = Array(Float64,(num_param, n))
-  dist_plot = Array(Float64,n)
+  theta_plot = Array{Float64}(num_param, n)
+  dist_plot = Array{Float64}(n)
   for i in 1:n
     theta_plot[:,i], dist_plot[i], attempts_plot, accept_log_plot, reject_log_plot = ABC.generate_theta(abc_plan, sampler, ss_true, epsilon)
   end
@@ -13,8 +13,8 @@ end
 function init_abc_serial(plan::abc_pmc_plan_type, ss_true)
   num_param = length(Distributions.rand(plan.prior))
   # Allocate arrays
-  theta = Array(Float64,(num_param,plan.num_part))
-  dist_theta = Array(Float64,plan.num_part)
+  theta = Array{Float64}(num_param,plan.num_part)
+  dist_theta = Array{Float64}(plan.num_part)
   attempts = zeros(plan.num_part)
   accept_log_combo = abc_log_type()
   reject_log_combo = abc_log_type()

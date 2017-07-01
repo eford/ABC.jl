@@ -2,7 +2,8 @@ if !isdefined(:Distributions) using Distributions end
 if !isdefined(:PDMats)        using PDMats end
 
 
-abstract GaussianMixtureModelCommonCovarAbstract <: Distribution
+#@compat abstract type GaussianMixtureModelCommonCovarAbstract <: Distribution end
+@compat abstract type GaussianMixtureModelCommonCovarAbstract  <: Distribution{Multivariate,Continuous} end
 
 immutable GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
