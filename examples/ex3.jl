@@ -7,14 +7,14 @@ import Compat.view
 
 # Set Prior for Population Parameters
 d1 = Rayleigh(0.3)
-d2 = MvNormal([0.0, 1.0], ones(2))
+d2 = MvNormal([0.0, 1.0, 2.0, 3.0], ones(4))
 param_prior = CompositeDist( ContinuousDistribution[d1,d2] )
 
 # Code to generate simulated data given array of model parameters
 num_data_default = 100
 num_outputs = 2
 function gen_data(theta::Array, n::Integer = num_data_default)
-  data = Array(Float64,(3,n))
+  data = Array{Float64}(3,n)
   data[1,:] = rand(Rayleigh(theta[1]),n)
   data[2:3,:] = rand(MvNormal(theta[2:3],ones(2)),n)
   return data
@@ -33,11 +33,11 @@ function is_valid_theta13_pos(theta::Array)
 end
 
 # True Population Parameters
-theta_true = [0.3, 0.0, 1.0]
+theta_true = [0.3, 0.0, 1.0, 2.0, 3.0]
 
 # Tell ABC what it needs to know for a simulation
 abc_plan = abc_pmc_plan_type(gen_data,ABC.calc_summary_stats_mean_var,ABC.calc_dist_max, param_prior; is_valid=is_valid_theta13_pos,num_max_attempt=10000, 
-   make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_diag_covar, param_active=[1,2], adaptive_quantiles=true);
+   make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_neighbors_diag_covar, param_active=[1,2], adaptive_quantiles=true);
 
 # Generate "true/observed data"
 data_true = gen_data(theta_true)   # Draw "real" data from same model as for analysis

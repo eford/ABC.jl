@@ -1,13 +1,13 @@
 @compat abstract type abc_plan_type end
 
 type abc_pmc_plan_saveable_type <: abc_plan_type
-   gen_data::Compat.ASCIIString
-   calc_summary_stats::Compat.ASCIIString
-   calc_dist::Compat.ASCIIString
+   gen_data::String
+   calc_summary_stats::String
+   calc_dist::String
    prior::Distribution
-   make_proposal_dist::Compat.ASCIIString
-   normalize::Compat.ASCIIString
-   is_valid::Compat.ASCIIString
+   make_proposal_dist::String
+   normalize::String
+   is_valid::String
    num_part::Int64
    num_max_attempt::Int64
    num_max_attempt_valid::Int64
