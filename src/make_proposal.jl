@@ -78,12 +78,24 @@ function make_proposal_dist_gaussian_subset_diag_covar(pop::abc_population_type,
 end
 
 function make_proposal_dist_gaussian_rand_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
-  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+     println("# Proposals to perturb parameters: ", param_active)
+  end
   make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
 
 function make_proposal_dist_gaussian_rand_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
-  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+     println("# Proposals to perturb parameters: ", param_active)
+  end
   make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
 
