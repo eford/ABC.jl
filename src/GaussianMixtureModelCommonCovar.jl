@@ -204,8 +204,8 @@ immutable GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCov
 		end 
         @assert(1<=length(pact)<=length(p))
         for idx in pact
-            if ! 1<=idx<=length(p)
-               error("active parameters not in range 1:",length(p))
+            if ! (1<=idx<=length(p))
+               error("active parameter ",idx," not in range 1:",length(p))
             end
         end
         sump = 0.0
