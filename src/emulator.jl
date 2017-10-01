@@ -17,7 +17,7 @@ end
 type emulator_gp_savable_type{T<:Real}
   sigmasq_cor::T
   rho::T
-  kernel::Compat.ASCIIString
+  kernel::String
   input_train::Array{T,2}
   input_means::Array{T,1}
   input_covar::PDMat

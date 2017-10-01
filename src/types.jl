@@ -1,13 +1,13 @@
-abstract abc_plan_type
+@compat abstract type abc_plan_type end
 
 type abc_pmc_plan_saveable_type <: abc_plan_type
-   gen_data::Compat.ASCIIString
-   calc_summary_stats::Compat.ASCIIString
-   calc_dist::Compat.ASCIIString
+   gen_data::String
+   calc_summary_stats::String
+   calc_dist::String
    prior::Distribution
-   make_proposal_dist::Compat.ASCIIString
-   normalize::Compat.ASCIIString
-   is_valid::Compat.ASCIIString
+   make_proposal_dist::String
+   normalize::String
+   is_valid::String
    num_part::Int64
    num_max_attempt::Int64
    num_max_attempt_valid::Int64
@@ -99,7 +99,7 @@ type abc_log_type   # Not implemented yet
 end
 
 function abc_log_type()
-   abc_log_type( Array(Array{Float64,1},0), Array(Any,0), Array(Float64,0), Array(Float64,0), Array(Int64,0) )
+   abc_log_type( Array{Array{Float64,1}}(0), Array{Any}(0), Array{Float64}(0), Array{Float64}(0), Array{Int64}(0) )
 end
 
 

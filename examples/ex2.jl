@@ -14,7 +14,7 @@ param_prior = CompositeDist( ContinuousDistribution[d1,d2] )
 num_data_default = 100
 num_outputs = 2
 function gen_data(theta::Array, n::Integer = num_data_default)
-  data = Array(Float64,(3,n))
+  data = Array{Float64}(3,n)
   data[1,:] = rand(Rayleigh(theta[1]),n)
   data[2:3,:] = rand(MvNormal(theta[2:3],ones(2)),n)
   return data

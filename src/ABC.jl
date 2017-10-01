@@ -25,7 +25,9 @@ export
 import StatsBase.sample
 import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
-import Compat.String
+#import Compat.String
+#import Compat: UTF8String, ASCIIString, readstring, is_windows
+import Compat: @compat
 
 # until added to distributions, use our own
 include("GaussianMixtureModelCommonCovar.jl")

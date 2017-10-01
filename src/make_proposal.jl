@@ -1,13 +1,14 @@
 if !isdefined(:PDMats) using PDMats end
 
-function calc_mean_stddev(pop::abc_population_type; param_active = nothing)
+function calc_mean_stddev(pop::abc_population_type) #; param_active = nothing)
   theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
   theta_stddev = sqrt(var_weighted(pop.theta'.-theta_mean',pop.weights))  # scaled, weighted covar for parameters
   return (theta_mean,theta_stddev)
 end
 
 
-function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 4.0)
+function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, # param_active = nothing,
+         max_maha_distsq_per_dim::Real = 4.0)
   theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
   rawtau = cov_weighted(pop.theta'.-theta_mean',pop.weights)  # scaled, weighted covar for parameters
   tau = tau_factor*make_matrix_pd(rawtau)
@@ -28,7 +29,8 @@ function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_fa
   return sampler
 end
 
-function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active = nothing, max_maha_distsq_per_dim::Real = 4.0)
+function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, # param_active = nothing, 
+         max_maha_distsq_per_dim::Real = 4.0)
   theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
   tau = tau_factor*var_weighted(pop.theta'.-theta_mean',pop.weights)  # scaled, weighted covar for parameters
   if verbose
@@ -76,12 +78,42 @@ function make_proposal_dist_gaussian_subset_diag_covar(pop::abc_population_type,
 end
 
 function make_proposal_dist_gaussian_rand_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
-  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+     println("# Proposals to perturb parameters: ", param_active)
+  end
   make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
 
 function make_proposal_dist_gaussian_rand_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
-  param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active = union(sample(1:size(pop.theta,1),num_param_active,replace=false))
+     println("# Proposals to perturb parameters: ", param_active)
+  end
   make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
+
+function make_proposal_dist_gaussian_rand_subset_neighbors_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active_first = rand(1:nparam)
+     param_active = collect(param_active_first:(param_active_first+num_param_active-1))
+     for i in 1:length(param_active)
+         if param_active[i] > nparam
+            param_active[i] -= nparam
+         end
+     end 
+     println("# Proposals to perturb parameters: ", param_active)
+  end
+  make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
+end
+
 
