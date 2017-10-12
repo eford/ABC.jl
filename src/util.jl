@@ -57,8 +57,8 @@ function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Floa
   while !isposdef(B)
 	eigvalB,eigvecB = eig(B)
         pos_eigval_idx = eigvalB.>0.0
-	neweigval = (epsabs == 0.0) ? epsfac*minimum(eigvalB[pos_eigval_idx]) : epsabs
-	eigvalB[!pos_eigval_idx] = neweigval
+	neweigval = (epsabs == 0.0) ? epsfac*minimum(abs.(eigvalB[pos_eigval_idx])) : epsabs
+	eigvalB[.!pos_eigval_idx] = neweigval
 	B = eigvecB *diagm(eigvalB)*eigvecB'
 	println(itt,": ",B)
         #cholB = chol(B)
