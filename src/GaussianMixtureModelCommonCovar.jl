@@ -31,6 +31,11 @@ immutable GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbst
         table = Distributions.AliasTable(p)
         new(m, p ./ sump, ic, table)
     end
+
+end
+
+function GaussianMixtureModelCommonCovar(m::Array{Float64,2}, p::Vector{Float64}, ic::AbstractMatrix)
+    GaussianMixtureModelCommonCovar(m,p,make_matrix_pd(ic))
 end
 
 function mean(d::GaussianMixtureModelCommonCovarAbstract)
@@ -117,6 +122,10 @@ immutable GaussianMixtureModelCommonCovarTruncated <: GaussianMixtureModelCommon
         table = Distributions.AliasTable(p)
         new(m, p ./ sump, ic, table, mm)
     end
+end
+
+function GaussianMixtureModelCommonCovarTruncated(m::Array{Float64,2}, p::Vector{Float64}, ic::AbstractMatrix, mm::Float64)
+    GaussianMixtureModelCommonCovarTruncated(m, p, make_matrix_pd(ic), mm)
 end
 
 function pdf(d::GaussianMixtureModelCommonCovarTruncated, x::Array{Float64,1} )
@@ -216,7 +225,7 @@ immutable GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCov
             sump += p[i]
         end
         table = Distributions.AliasTable(p)
-        covar_subset = PDMat(ic[pact,pact])
+        covar_subset = PDMat(make_matrix_pd(ic[pact,pact]))
         new( m, p ./sump, covar_subset, table, copy(pact) )
      end
      function GaussianMixtureModelCommonCovarSubset(m::Array{Float64,2}, p::Vector{Float64}, ic::AbstractArray{Float64,1}, pact::Vector{Int64} )
