@@ -53,7 +53,8 @@ end
 
 function make_proposal_dist_gaussian_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )
   weights = ones(pop.weights)./length(pop.weights) # pop.weights
-  theta_mean = sum(pop.theta.*weights,2) # weighted mean for parameters
+  #weights = pop.weights
+  theta_mean = sum(pop.theta.*weights',2) # weighted mean for parameters
   rawtau = cov_weighted(pop.theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
   tau = tau_factor*rawtau
   #tau = tau_factor*make_matrix_pd(rawtau)
@@ -135,6 +136,56 @@ function make_proposal_dist_gaussian_rand_subset_neighbors_full_covar(pop::abc_p
          end
      end 
      println("# Proposals to perturb parameters: ", param_active)
+  end
+  make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
+end
+
+
+make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next = 1
+make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next = make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next
+
+function make_proposal_dist_gaussian_cycle_subset_neighbors_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
+  global make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next, make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active_first = ( (make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next-1) % nparam ) + 1
+     param_active = collect(param_active_first:(param_active_first+num_param_active-1))
+     for i in 1:length(param_active)
+         if param_active[i] > nparam
+            param_active[i] -= nparam
+         end
+     end 
+     println("# Proposals to perturb parameters: ", param_active)
+     make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next += num_param_active
+     if make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next > nparam
+        make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next = make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next
+        make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next = ( (make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next) % nparam ) + 1
+     end
+  end
+  make_proposal_dist_gaussian_subset_diag_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
+end
+
+function make_proposal_dist_gaussian_cycle_subset_neighbors_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
+  global make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next, make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next
+  nparam = size(pop.theta,1)
+  if num_param_active == nparam
+     param_active = 1:nparam
+  else
+     param_active_first = ( (make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next-1) % nparam ) + 1
+     param_active = collect(param_active_first:(param_active_first+num_param_active-1))
+     for i in 1:length(param_active)
+         if param_active[i] > nparam
+            param_active[i] -= nparam
+         end
+     end 
+     println("# Proposals to perturb parameters: ", param_active)
+     make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next += num_param_active
+     if make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next > nparam
+        make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next = make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next
+        make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next = ( (make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next) % nparam ) + 1
+     end
   end
   make_proposal_dist_gaussian_subset_full_covar(pop,tau_factor, verbose=verbose, param_active=param_active )
 end
