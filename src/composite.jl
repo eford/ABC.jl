@@ -13,7 +13,7 @@ import Distributions.mean, Distributions.mode, Distributions.var, Distributions.
 import Distributions.entropy, Distributions.insupport
 import Distributions._logpdf, Distributions._pdf!
 import Distributions._rand!
-import Compat.view    # Until v0.5
+#import Compat.view    # Until v0.5
 
 export AbstractCompositeContinuousDist, ContinuousMultivariateDistribution
 export GenericCompositeContinuousDist, CompositeDist
