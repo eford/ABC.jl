@@ -88,18 +88,18 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   eps_diff_count = 0
 
   # Uncomment for generation info output to log file
-  #=  
+  #  
   if verbose
      f_log = open("generation_log.txt", "w")
   end
-  =#
+  #
 
   # Uncomment for history output at end of run to terminal
-  #=
+  #
   eps_arr = []
   mean_arr = []
   std_arr = []  
-  =#
+  #
 
   for t in 1:plan.num_max_times
     local new_pop
@@ -118,23 +118,23 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     pop = new_pop
     if verbose && (t%print_every == 0)
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
-       #println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
+       println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
 
        # Uncomment for generation info output to log file
-       #=
+       #
        println(f_log, "# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats))
        println(f_log, "Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
        flush(f_log)
        save(string("gen-",t,".jld"), "pop_out", pop, "ss_true", ss_true)
-       =#
+       #
         
     end
     # Uncomment for history output at end of run to terminal
-    #=
+    #
     push!(eps_arr, epsilon)
     push!(mean_arr, mean(pop.theta,2)[1])
     push!(std_arr, std(pop.theta,2)[1])
-    =#
+    #
     #if epsilon < plan.target_epsilon  # stop once acheive goal
     if maximum(pop.dist) < plan.target_epsilon  # stop once acheive goal
        println("# Reached ",epsilon," after ", t, " generations.")
@@ -164,20 +164,20 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
 
   # Uncomment for history output at end of run to terminal
-  #=
+  #
   if verbose
      println("Epsilon history = ", eps_arr)
      println("Mean history = ", mean_arr)
      println("Std Dev. history = ", std_arr)
   end
-  =#
+  #
 
   # Uncomment for generation info output to log file
-  #=
+  #
   if verbose
      close(f_log)
   end
-    =#
+  #
   
   return pop
 end
