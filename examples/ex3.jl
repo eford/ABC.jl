@@ -43,8 +43,9 @@ abc_plan = abc_pmc_plan_type(gen_data,ABC.calc_summary_stats_mean_var,ABC.calc_d
  #  make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_neighbors_diag_covar, adaptive_quantiles=true);
  #  make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_neighbors_full_covar, adaptive_quantiles=true);
  #  make_proposal_dist = ABC.make_proposal_dist_gaussian_cycle_subset_neighbors_diag_covar, adaptive_quantiles=true);
-   make_proposal_dist = ABC.make_proposal_dist_gaussian_cycle_subset_neighbors_full_covar, adaptive_quantiles=false);
+ #  make_proposal_dist = ABC.make_proposal_dist_gaussian_cycle_subset_neighbors_full_covar, adaptive_quantiles=false);
  #  make_proposal_dist = ABC.make_proposal_dist_gaussian_rand_subset_full_covar, adaptive_quantiles=true);
+    make_proposal_dist = ABC.make_proposal_dist_gaussian_cycle_zoomed_subset_neighbors_diag_covar, adaptive_quantiles=false);
 
 # Generate "true/observed data"
 data_true = gen_data(theta_true)   # Draw "real" data from same model as for analysis
