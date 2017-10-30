@@ -147,7 +147,7 @@ make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next = make_proposa
 function make_proposal_dist_gaussian_cycle_subset_neighbors_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, num_param_active::Integer = 2)
   global make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next, make_proposal_dist_gaussian_cycle_subset_neighbors_cycle_start_idx_next
   nparam = size(pop.theta,1)
-  if num_param_active == nparam
+  if num_param_active >= nparam
      param_active = 1:nparam
   else
      param_active_first = ( (make_proposal_dist_gaussian_cycle_subset_neighbors_param_idx_next-1) % nparam ) + 1
