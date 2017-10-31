@@ -140,7 +140,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
        println("# Reached ",epsilon," after ", t, " generations.")
        break
     end
-    if median(attempts)>0.1*plan.num_max_attempt
+    if median(attempts)>0.2*plan.num_max_attempt
       println("# Halting due to ", median(attempts), " median number of valid attempts.")
       break
     end
