@@ -125,7 +125,7 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
        println(f_log, "# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats))
        println(f_log, "Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
        flush(f_log)
-       save(string("gen-",t,".jld"), "pop_out", pop, "ss_true", ss_true)
+       #save(string("gen-",t,".jld"), "pop_out", pop, "ss_true", ss_true)
        #
         
     end
