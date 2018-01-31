@@ -23,4 +23,3 @@ function rand(d::MultiUniform)
   end
   return result_arr
 end
-

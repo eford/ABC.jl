@@ -52,6 +52,8 @@ end
 
 function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Float64 = 1.0e-6)
   @assert(size(A,1)==size(A,2))
+  println("make_matrix_pd input: ", A)
+  flush(STDOUT)
   B = 0.5*(A+A')
   itt = 1
   while !isposdef(B)
@@ -61,6 +63,7 @@ function make_matrix_pd(A::Array{Float64,2}; epsabs::Float64 = 0.0, epsfac::Floa
 	eigvalB[.!pos_eigval_idx] = neweigval
 	B = eigvecB *diagm(eigvalB)*eigvecB'
 	println(itt,": ",B)
+        flush(STDOUT)
         #cholB = chol(B)
 	itt +=1
 	if itt>size(A,1)
@@ -141,7 +144,4 @@ function normalize_vector_of_log_values(x::Vector{Float64})
       logsum = logsumexp(x)
       param_vector = exp(param_vector-logsum)
 end
-
-
-
 

@@ -81,4 +81,3 @@ levels = [exp(-0.5*i^2)/sqrt(2pi^num_param) for i in 0:5];
 PyPlot.contour(x,y,zz',levels);
 plot(pop_out.theta[1,:],pop_out.theta[2,:],".");
 =#
-

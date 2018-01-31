@@ -44,4 +44,3 @@ include("log.jl")
 #include("emulator.jl")
 
 end # module
-

@@ -1,3 +1,5 @@
+using JLD
+
 function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true, epsilon::Float64; num_max_attempt = plan.num_max_attempt)
       @assert(epsilon>=0.0)
       dist_best = Inf
@@ -85,6 +87,20 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
   epsilon = quantile(pop.dist,plan.init_epsilon_quantile)
   eps_diff_count = 0
 
+  # Uncomment for generation info output to log file
+  #  
+  if verbose
+     f_log = open("generation_log.txt", "w")
+  end
+  #
+
+  # Uncomment for history output at end of run to terminal
+  #
+  eps_arr = []
+  mean_arr = []
+  std_arr = []  
+  #
+
   for t in 1:plan.num_max_times
     local new_pop
     sampler = plan.make_proposal_dist(pop, plan.tau_factor)
@@ -94,23 +110,37 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
     end
     if in_parallel
       #new_pop = update_abc_pop_parallel_darray(plan, ss_true, pop, epsilon, attempts=attempts)
-	    new_pop = update_abc_pop_parallel_distributed_map(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
+      new_pop = update_abc_pop_parallel_distributed_map(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
     else
-	  #new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
+      #new_pop = update_abc_pop_serial(plan, ss_true, pop, epsilon, attempts=attempts)
       new_pop = update_abc_pop_serial(plan, ss_true, pop, sampler, epsilon, attempts=attempts)
     end
     pop = new_pop
     if verbose && (t%print_every == 0)
        println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
-       # println("# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " max(d)= ", maximum(pop.dist), " med(attempts)= ",median(attempts), " max(a)= ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats)) #," mean(theta)= ",mean(pop.theta,2) )#) #, " tau= ",diag(tau) ) #
-      println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
+       println("Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
+
+       # Uncomment for generation info output to log file
+       #
+       println(f_log, "# t= ",t, " eps= ",epsilon, " med(d)= ",median(pop.dist), " attempts= ",median(attempts), " ",maximum(attempts), " reps= ", sum(pop.repeats), " ess= ",ess(pop.weights,pop.repeats))
+       println(f_log, "Mean(theta)= ", mean(pop.theta, 2), " Stand. Dev.(theta)= ", std(pop.theta, 2))
+       flush(f_log)
+       #save(string("gen-",t,".jld"), "pop_out", pop, "ss_true", ss_true)
+       #
+        
     end
+    # Uncomment for history output at end of run to terminal
+    #
+    push!(eps_arr, epsilon)
+    push!(mean_arr, mean(pop.theta,2)[1])
+    push!(std_arr, std(pop.theta,2)[1])
+    #
     #if epsilon < plan.target_epsilon  # stop once acheive goal
     if maximum(pop.dist) < plan.target_epsilon  # stop once acheive goal
        println("# Reached ",epsilon," after ", t, " generations.")
        break
     end
-    if median(attempts)>0.1*plan.num_max_attempt
+    if median(attempts)>0.2*plan.num_max_attempt
       println("# Halting due to ", median(attempts), " median number of valid attempts.")
       break
     end
@@ -128,23 +158,35 @@ function run_abc(plan::abc_pmc_plan_type, ss_true, pop::abc_population_type; ver
       eps_diff_count = 0
     end
     if eps_diff_count > 1
-      println("# Halting due to epsilon not improving significantly for 3 consecutive generations.")
+      println("# Halting due to epsilon goal remaining the same for 3 consecutive generations.")
       break
     end  end # t / num_times
-  #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
+    #println("mean(theta) = ",[ sum(pop.theta[i,:])/size(pop.theta,2) for i in 1:size(pop.theta,1) ])
+
+  # Uncomment for history output at end of run to terminal
+  #
   if verbose
-     #println("Epsilon history = ", eps_arr)
-     #println("Mean history = ", mean_arr)
-     #println("Std Dev. history = ", std_arr)
+     println("Epsilon history = ", eps_arr)
+     println("Mean history = ", mean_arr)
+     println("Std Dev. history = ", std_arr)
   end
+  #
+
+  # Uncomment for generation info output to log file
+  #
+  if verbose
+     close(f_log)
+  end
+  #
+  
   return pop
 end
 
 # run the ABC algorithm matching to summary statistics ss_true
-function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool =  plan.in_parallel )                                          # Initialize population, drawing from prior
+function run_abc(plan::abc_pmc_plan_type, ss_true; verbose::Bool = false, print_every::Integer=1, in_parallel::Bool =  plan.in_parallel )                         # Initialize population, drawing from prior
   pop::abc_population_type = init_abc(plan,ss_true, in_parallel=in_parallel)
   #println("pop_init: ",pop)
-  run_abc(plan, ss_true, pop; verbose=verbose, print_every=print_every, in_parallel=in_parallel )  # Initialize population, drawing from prior
+  run_abc(plan, ss_true, pop; verbose=verbose, print_every=print_every, in_parallel=in_parallel )
 end
 
 function choose_epsilon_adaptive(pop::abc_population_type, sampler::Distribution; min_quantile::Real = 1.0/sqrt(size(pop.theta,2)) )

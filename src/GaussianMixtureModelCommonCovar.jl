@@ -128,7 +128,6 @@ function GaussianMixtureModelCommonCovarTruncated(m::Array{Float64,2}, p::Vector
     GaussianMixtureModelCommonCovarTruncated(m, p, make_matrix_pd(ic), mm)
 end
 
-
 function pdf(d::GaussianMixtureModelCommonCovarTruncated, x::Array{Float64,1} )
     p = 0.0
     normalization = cdf(Distributions.Chisq(length(x)),d.max_mahalanobis)
@@ -311,4 +310,3 @@ function rand(d::GaussianMixtureModelCommonCovarSubset)
     param[d.param_active] = Distributions.rand(Distributions.MvNormal(vec(d.mu[d.param_active,i]),d.covar))
     return param
 end
-
