@@ -56,7 +56,7 @@ type abc_pmc_plan_type <: abc_plan_type
    function abc_pmc_plan_type(gd::Function,css::Function,cd::Function,p::Distribution;
      make_proposal_dist::Function = make_proposal_dist_gaussian_full_covar, param_active::Vector{Int64} = collect(1:length(Distributions.rand(p))),
      normalize::Function = noop, is_valid::Function = noop,
-     num_part::Integer = 10*length(Distributions.rand(p))^2, num_max_attempt::Integer = 1000, num_max_attempt_valid::Integer = 100, num_max_times::Integer = 100,
+     num_part::Integer = 10*length(Distributions.rand(p))^2, num_max_attempt::Integer = 1000, num_max_attempt_valid::Integer = 50, num_max_times::Integer = 100,
      epsilon_init::Float64 = 1.0, init_epsilon_quantile::Float64 = 0.75, epsilon_reduction_factor::Float64 = 0.9,
      target_epsilon::Float64 = 0.01, tau_factor::Float64 = 2.0,
      adaptive_quantiles::Bool = false, stop_on_decreasing_efficiency::Bool = false,
