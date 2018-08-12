@@ -44,12 +44,12 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
               theta_best = copy(theta_star)
            end
            if(dist_star < epsilon)
-             accept_prob += 1
+             accept_prob += 1.0
            end
          end
          accept_prob /= plan.num_dist_per_obs 
 
-         accept = rand() < epsilon
+         accept = rand() < accept_prob
 
          if(!accept)
               push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
