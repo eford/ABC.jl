@@ -1,6 +1,6 @@
-if !@isdefined  PDMats
-   using PDMats 
-end
+#if !@isdefined  PDMats
+#   using PDMats 
+#end
 
 function calc_mean_stddev(pop::abc_population_type) #; param_active = nothing)
   theta_mean = sum(pop.theta.*pop.weights',dims=2) # weighted mean for parameters

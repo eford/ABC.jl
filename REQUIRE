@@ -1,12 +1,14 @@
-julia 0.6
+julia 0.7
 Compat
 Distributions
 PDMats
 Distances
-Distributed
 DistributedArrays
 #JLD
 StatsBase
-Statistics
 MultivariateStats
+# New requirements for 0.7
+Distributed
+Statistics
+
 

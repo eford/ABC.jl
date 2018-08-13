@@ -1,3 +1,4 @@
+#=
 if !@isdefined  Distributions
   using Distributions 
 end
@@ -7,6 +8,7 @@ end
 if !@isdefined  Statistics 
   using Statistics
 end
+=#
 
 #@compat abstract type GaussianMixtureModelCommonCovarAbstract <: Distribution end
 @compat abstract type GaussianMixtureModelCommonCovarAbstract  <: Distribution{Multivariate,Continuous} end
@@ -44,7 +46,6 @@ function GaussianMixtureModelCommonCovar(m::Array{Float64,2}, p::Vector{Float64}
     GaussianMixtureModelCommonCovar(m,p,make_matrix_pd(ic))
 end
 
-import Statistics.mean
 function mean(d::GaussianMixtureModelCommonCovarAbstract)
     np = size(d.mu,2)
     m = zeros(np)

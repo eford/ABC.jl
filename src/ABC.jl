@@ -2,12 +2,17 @@ module ABC
 
 # package code goes here
 
-using Statistics
 using Distributions
 using PDMats
-using Distributed
 using DistributedArrays
 using Compat
+if VERSION >= v"0.7"
+  using Statistics
+  using Distributed
+  import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
+else
+  import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
+end
 
 export
   # types
@@ -25,7 +30,6 @@ export
 
 
 import StatsBase.sample
-import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
 #import Compat.String
 #import Compat: UTF8String, ASCIIString, readstring, is_windows

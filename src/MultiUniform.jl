@@ -1,6 +1,6 @@
-if !@isdefined  Distributions
-  using Distributions 
-end
+#if !@isdefined  Distributions
+#  using Distributions 
+#end
 
 struct MultiUniform <: Distribution
   a::Float64
