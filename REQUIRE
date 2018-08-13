@@ -5,3 +5,5 @@ PDMats
 Distances
 DistributedArrays
 MultivariateStats
+Pkg
+Libdl
