@@ -23,7 +23,11 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
          attempts += 1
          data_star = plan.gen_data(theta_star)
          ss_star = plan.calc_summary_stats(data_star)
-         dist_star = plan.calc_dist(ss_true,ss_star)
+
+         accept_prob = 0.
+         local dist_star
+         for d in 1:plan.num_dist_per_obs
+           dist_star = plan.calc_dist(ss_true,ss_star)
          #=
          if plan.save_params
            push!(summary_stats_log.theta, theta_star)
@@ -35,17 +39,24 @@ function generate_theta(plan::abc_pmc_plan_type, sampler::Distribution, ss_true,
            push!(summary_stats_log.dist, dist_star)
          end
          =#
-         if dist_star < dist_best
-            dist_best = dist_star
-            theta_best = copy(theta_star)
-            push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
-         else
-            push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
+           if dist_star < dist_best
+              dist_best = dist_star
+              theta_best = copy(theta_star)
+           end
+           if(dist_star < epsilon)
+             accept_prob += 1.0
+           end
          end
+         accept_prob /= plan.num_dist_per_obs 
 
-         if(dist_best < epsilon)
-            all_attempts = a
-            break
+         accept = rand() < accept_prob
+
+         if(!accept)
+              push_to_abc_log!(reject_log,plan,theta_star,ss_star,dist_star)
+         else
+              push_to_abc_log!(accept_log,plan,theta_star,ss_star,dist_star)
+              all_attempts = a
+              break
          end
       end
       if dist_best == Inf
