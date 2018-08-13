@@ -1,7 +1,9 @@
-if !isdefined(:PDMats) using PDMats end
+if !@isdefined  PDMats
+   using PDMats 
+end
 
 function calc_mean_stddev(pop::abc_population_type) #; param_active = nothing)
-  theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
+  theta_mean = sum(pop.theta.*pop.weights',dims=2) # weighted mean for parameters
   theta_stddev = sqrt(var_weighted(pop.theta'.-theta_mean',pop.weights))  # scaled, weighted covar for parameters
   return (theta_mean,theta_stddev)
 end
@@ -9,7 +11,7 @@ end
 
 function make_proposal_dist_gaussian_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, # param_active = nothing,
          max_maha_distsq_per_dim::Real = 4.0)
-  theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
+  theta_mean = sum(pop.theta.*pop.weights',dims=2) # weighted mean for parameters
   rawtau = cov_weighted(pop.theta'.-theta_mean',pop.weights)  # scaled, weighted covar for parameters
   tau = tau_factor*rawtau
   #tau = tau_factor*make_matrix_pd(rawtau)
@@ -32,7 +34,7 @@ end
 
 function make_proposal_dist_gaussian_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, # param_active = nothing, 
          max_maha_distsq_per_dim::Real = 4.0)
-  theta_mean = sum(pop.theta.*pop.weights',2) # weighted mean for parameters
+  theta_mean = sum(pop.theta.*pop.weights',dims=2) # weighted mean for parameters
   tau = tau_factor*var_weighted(pop.theta'.-theta_mean',pop.weights)  # scaled, weighted covar for parameters
   if verbose
     println("theta_mean = ", theta_mean)
@@ -54,7 +56,7 @@ end
 function make_proposal_dist_gaussian_subset_full_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )
   weights = ones(pop.weights)./length(pop.weights) # pop.weights
   #weights = pop.weights
-  theta_mean = sum(pop.theta.*weights',2) # weighted mean for parameters
+  theta_mean = sum(pop.theta.*weights',dims=2) # weighted mean for parameters
   rawtau = cov_weighted(pop.theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
   tau = tau_factor*rawtau
   #tau = tau_factor*make_matrix_pd(rawtau)
@@ -71,7 +73,7 @@ end
 
 function make_proposal_dist_gaussian_subset_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)) )
   weights = ones(pop.weights)./length(pop.weights) # pop.weights
-  theta_mean = sum(pop.theta.*weights',2) # weighted mean for parameters
+  theta_mean = sum(pop.theta.*weights',dims=2) # weighted mean for parameters
   tau = tau_factor*var_weighted(pop.theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
   if verbose
     println("theta_mean = ", theta_mean)
@@ -193,7 +195,7 @@ end
 function make_proposal_dist_gaussian_subset_zoomed_diag_covar(pop::abc_population_type, tau_factor::Float64; verbose::Bool = false, param_active::Vector{Int64} = collect(1:size(pop.covar,1)), inactive_scale_factor::Float64 = 0.25, max_maha_distsq_per_dim::Real = 4.0 )
   weights = pop.weights
   # weights = ones(pop.weights)./length(pop.weights) # pop.weights
-  theta_mean = sum(pop.theta.*weights',2) # weighted mean for parameters
+  theta_mean = sum(pop.theta.*weights',dims=2) # weighted mean for parameters
   tau = tau_factor*var_weighted(pop.theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
   if verbose
     println("theta_mean = ", theta_mean)

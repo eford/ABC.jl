@@ -2,8 +2,10 @@ module ABC
 
 # package code goes here
 
+using Statistics
 using Distributions
 using PDMats
+using Distributed
 using DistributedArrays
 using Compat
 
@@ -23,7 +25,7 @@ export
 
 
 import StatsBase.sample
-import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
+import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
 #import Compat.String
 #import Compat: UTF8String, ASCIIString, readstring, is_windows

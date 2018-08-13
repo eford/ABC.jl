@@ -1,11 +1,17 @@
-if !isdefined(:Distributions) using Distributions end
-if !isdefined(:PDMats)        using PDMats end
-
+if !@isdefined  Distributions
+  using Distributions 
+end
+if !@isdefined  PDMats
+  using PDMats 
+end
+if !@isdefined  Statistics 
+  using Statistics
+end
 
 #@compat abstract type GaussianMixtureModelCommonCovarAbstract <: Distribution end
 @compat abstract type GaussianMixtureModelCommonCovarAbstract  <: Distribution{Multivariate,Continuous} end
 
-immutable GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbstract
+struct GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat
@@ -38,6 +44,7 @@ function GaussianMixtureModelCommonCovar(m::Array{Float64,2}, p::Vector{Float64}
     GaussianMixtureModelCommonCovar(m,p,make_matrix_pd(ic))
 end
 
+import Statistics.mean
 function mean(d::GaussianMixtureModelCommonCovarAbstract)
     np = size(d.mu,2)
     m = zeros(np)
@@ -95,7 +102,7 @@ function rand(d::GaussianMixtureModelCommonCovar)
 end
 
 
-immutable GaussianMixtureModelCommonCovarTruncated <: GaussianMixtureModelCommonCovarAbstract
+struct GaussianMixtureModelCommonCovarTruncated <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat
@@ -197,7 +204,7 @@ end
 
 
 
-immutable GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCovarAbstract
+struct GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat

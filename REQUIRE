@@ -3,5 +3,10 @@ Compat
 Distributions
 PDMats
 Distances
+Distributed
 DistributedArrays
+#JLD
+StatsBase
+Statistics
 MultivariateStats
+
