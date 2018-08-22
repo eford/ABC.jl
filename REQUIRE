@@ -6,5 +6,4 @@ Distances
 DistributedArrays
 MultivariateStats
 StatsBase
-Pkg
-Libdl
+
