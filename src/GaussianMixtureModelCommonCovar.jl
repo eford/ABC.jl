@@ -1,14 +1,18 @@
-#=
-if !@isdefined  Distributions
-  using Distributions 
-end
-if !@isdefined  PDMats
-  using PDMats 
-end
-if !@isdefined  Statistics 
+
+using Compat
+using PDMats
+using Distributions
+
+if VERSION >= v"0.7"
   using Statistics
+  using Distributed
+  import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
+else
+  using Compat.Statistics
+  using Compat.Distributed
+  import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
 end
-=#
+
 
 #@compat abstract type GaussianMixtureModelCommonCovarAbstract <: Distribution end
 @compat abstract type GaussianMixtureModelCommonCovarAbstract  <: Distribution{Multivariate,Continuous} end
