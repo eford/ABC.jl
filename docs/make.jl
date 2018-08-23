@@ -16,7 +16,7 @@ makedocs(
 
 deploydocs(
     repo   = "github.com/eford/ABC.jl.git",
-    julia  = "0.6.0", 
+    julia  = "0.6", 
     target = "build",
     deps   = nothing,
     make   = nothing
