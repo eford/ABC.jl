@@ -11,7 +11,9 @@ if VERSION >= v"0.7"
   using Distributed
   import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
 else
-  import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
+  #import Base: sum, mean, std
+  import Compat: sum, mean, std
+  import Base: median, maximum, minimum, quantile, var, cov, cor
 end
 
 export
