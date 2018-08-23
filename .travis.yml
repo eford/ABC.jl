@@ -1,7 +1,7 @@
 language: julia
 
 os:
-  - osx
+  - linux
 
 julia:
   - 0.6
@@ -23,6 +23,6 @@ branches:
 #  - julia -e 'Pkg.test("ABC",coverage=true)'
 
 after_success:
-  - julia -e 'Pkg.add("Documenter"); cd(Pkg.dir("ABC")); include(joinpath("docs", "make.jl"))'
+  - julia -e 'ENV["DOCUMENTER_DEBUG"] = "true"; Pkg.add("Documenter"); cd(Pkg.dir("ABC")); include(joinpath("docs", "make.jl"))'
   - julia -e 'cd(Pkg.dir("ABC")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
 #  - julia -e 'cd(Pkg.dir("ABC")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
