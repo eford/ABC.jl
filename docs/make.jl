@@ -2,6 +2,7 @@ using Documenter, ABC
 
 makedocs(
     modules = [ABC],
+    doctest = true, 
     clean = false,
     format = :html,
     sitename = "ABC.jl",

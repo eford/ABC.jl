@@ -1,3 +1,8 @@
+"""
+   ABC
+Module providing 
+   types (abc_pmc_plan_type, abc_population_type) and methods (generate_theta, init_abc, update_abc_pop, run_abc) for using Approximate Bayesian Computing
+"""
 module ABC
 
 # package code goes here

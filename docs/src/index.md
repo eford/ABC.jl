@@ -15,8 +15,9 @@ However, it does include several extra features that will eventually be document
 ## API
 
 ```@docs 
-abc_pmc_plan_type(gd,css,cd,p)
-abc_population_type(num_param::Integer, num_particles::Integer)
+ABC
+ABC.abc_pmc_plan_type(gd::Function,css::Function,cd::Function,p)
+ABC.abc_population_type(num_param::Integer, num_particles::Integer)
 ```
 
  

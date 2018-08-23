@@ -27,10 +27,10 @@ pop_out = run_abc(abc_plan,ss_obs;verbose=true);
 
 println("# Results: ",mean(pop_out.theta[1,:]), " ",mean(pop_out.theta[2,:]))
 if abs(mean(pop_out.theta[1,:]))>0.05
-  return 1
+  return false
 end
 if abs(mean(pop_out.theta[2,:])-1)>0.05
-  return 2
+  return false
 end
-return 0
+return true
 end
