@@ -1,13 +1,13 @@
 using Documenter, ABC
 
 makedocs(
-    modules = [ABC],
-    doctest = true, 
-    clean = false,
     format = :html,
     sitename = "ABC.jl",
+    modules = [ABC],
+#    doctest = true, 
+#    clean = false,
     pages = [
-        "index.md",
+        "index.md", "page1.md",
     ],
     html_prettyurls = !("local" in ARGS)
 
