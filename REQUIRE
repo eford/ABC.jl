@@ -8,7 +8,7 @@ DistributedArrays
 StatsBase
 MultivariateStats
 # New requirements for 0.7
-Distributed
-Statistics
+Base.Distributed
+Base.Statistics
 
 
