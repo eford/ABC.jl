@@ -4,6 +4,10 @@ Distributions
 PDMats
 Distances
 DistributedArrays
-MultivariateStats
 StatsBase
+MultivariateStats
+# New requirements for 0.7
+Statistics
+Distributed
+
 

@@ -1,6 +1,8 @@
-if !isdefined(:Distributions) using Distributions end
+#if !@isdefined  Distributions
+#  using Distributions 
+#end
 
-immutable MultiUniform <: Distribution
+struct MultiUniform <: Distribution
   a::Float64
   b::Float64
   num_param::Integer

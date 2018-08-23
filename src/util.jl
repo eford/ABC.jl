@@ -85,15 +85,15 @@ end
 # Compute Effective Sample Size for array of weights, ignorring any repeated elements
 function ess(w::Array{Float64,1}, repeat::Array{Int64,1} )
   @assert(length(w)==length(repeat))
-  sumw = sum(w[find(x->x==0,repeat)])
-  sumw2 = sum(w[find(x->x==0,repeat)].^2)
+  sumw = sum(w[findall(x->x==0,repeat)])
+  sumw2 = sum(w[findall(x->x==0,repeat)].^2)
   return sumw*sumw/sumw2
 end
 
 
 # Common summary stats and distances
 function calc_summary_stats_mean_var(x::Array{T,2} )  where T <:Real
- @inbounds m = mean(x,2); 
+ @inbounds m = mean(x,dims=2); 
  @inbounds v = var(x,2,mean=vec(m)); 
  return vcat(m, v)
 end
@@ -105,16 +105,16 @@ function calc_summary_stats_mean_var(x::Array{T,1} )  where T <:Real
 end
 
 calc_dist_max(x::Array{Float64},y::Array{Float64}) = maximum(abs.(x.-y))
-dist_scale = Array{Float64}(0)
+dist_scale = Array{Float64}(undef,0)
 calc_scaled_dist_max(x::Array{Float64,1},y::Array{Float64,1}, scale::Array{Float64,1} = dist_scale) = maximum(abs(x.-y)./scale)
 
 function set_distance_scale(ds::Array{Float64,1})
   global dist_scale
   dist_scale = copy(ds)
 end
-function set_distance_scale{T}(plan::abc_pmc_plan_type, theta::Array{Float64,1}; num_draw::Integer = 40,
-                  ss::Array{T,1} = plan.calc_summary_stats(plan.gen_data(theta)) )
-  dist = Array{Float64}(length(ss),num_draw)
+function set_distance_scale( plan::abc_pmc_plan_type, theta::Array{Float64,1}; num_draw::Integer = 40,
+                  ss::Array{T,1} = plan.calc_summary_stats(plan.gen_data(theta)) ) where T
+  dist = Array{Float64}(undef,length(ss),num_draw)
   for i in 1:num_draw
     dist[:,i] = abs(ss.-plan.calc_summary_stats(plan.gen_data(theta)))
   end

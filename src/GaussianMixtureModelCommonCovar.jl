@@ -1,11 +1,23 @@
-if !isdefined(:Distributions) using Distributions end
-if !isdefined(:PDMats)        using PDMats end
+
+using Compat
+using PDMats
+using Distributions
+
+if VERSION >= v"0.7"
+  using Statistics
+  using Distributed
+  import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
+else
+  using Compat.Statistics
+  using Compat.Distributed
+  import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
+end
 
 
 #@compat abstract type GaussianMixtureModelCommonCovarAbstract <: Distribution end
 @compat abstract type GaussianMixtureModelCommonCovarAbstract  <: Distribution{Multivariate,Continuous} end
 
-immutable GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbstract
+struct GaussianMixtureModelCommonCovar <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat
@@ -95,7 +107,7 @@ function rand(d::GaussianMixtureModelCommonCovar)
 end
 
 
-immutable GaussianMixtureModelCommonCovarTruncated <: GaussianMixtureModelCommonCovarAbstract
+struct GaussianMixtureModelCommonCovarTruncated <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat
@@ -197,7 +209,7 @@ end
 
 
 
-immutable GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCovarAbstract
+struct GaussianMixtureModelCommonCovarSubset <: GaussianMixtureModelCommonCovarAbstract
 	mu::Array{Float64,2}
 	probs::Vector{Float64}
         covar::AbstractPDMat

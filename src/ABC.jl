@@ -11,6 +11,17 @@ using Distributions
 using PDMats
 using DistributedArrays
 using Compat
+if VERSION >= v"0.7"
+  using Statistics
+  using Distributed
+  import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
+else
+  #import Base: sum, mean, std
+  import Compat: sum, mean, std
+  import Base: median, maximum, minimum, quantile, var, cov, cor
+  using Compat.Statistics
+  using Compat.Distributed
+end
 
 export
   # types
@@ -28,10 +39,7 @@ export
 
 
 import StatsBase.sample
-import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
 import Base: rand
-#import Compat.String
-#import Compat: UTF8String, ASCIIString, readstring, is_windows
 import Compat: @compat
 
 # until added to distributions, use our own

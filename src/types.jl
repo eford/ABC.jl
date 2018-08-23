@@ -1,6 +1,6 @@
 @compat abstract type abc_plan_type end
 
-type abc_pmc_plan_saveable_type <: abc_plan_type
+mutable struct abc_pmc_plan_saveable_type <: abc_plan_type
    gen_data::String
    calc_summary_stats::String
    calc_dist::String
@@ -28,9 +28,7 @@ type abc_pmc_plan_saveable_type <: abc_plan_type
    in_parallel::Bool
 end
 
-
-
-type abc_pmc_plan_type <: abc_plan_type
+mutable struct abc_pmc_plan_type <: abc_plan_type
    gen_data::Function
    calc_summary_stats::Function
    calc_dist::Function
@@ -102,7 +100,7 @@ function abc_pmc_plan_type(plan::abc_pmc_plan_saveable_type)
 end
 
 
-type abc_log_type   # Not implemented yet
+mutable struct abc_log_type   # Not implemented yet
    theta::Array{Array{Float64,1},1}
    ss::Array{Any,1}
    dist::Array{Float64,1}
@@ -116,11 +114,11 @@ type abc_log_type   # Not implemented yet
 end
 
 function abc_log_type()
-   abc_log_type( Array{Array{Float64,1}}(0), Array{Any}(0), Array{Float64}(0), Array{Float64}(0), Array{Int64}(0) )
+   abc_log_type( Array{Array{Float64,1}}(undef,0), Array{Any}(undef,0), Array{Float64}(undef,0), Array{Float64}(undef,0), Array{Int64}(undef,0) )
 end
 
 
-type abc_population_type_old # Deprecated, but kept for now, in case need to read in data from a file
+mutable struct abc_population_type_old # Deprecated, but kept for now, in case need to read in data from a file
    theta::Array{Float64,2}
    weights::Array{Float64,1}
    dist::Array{Float64,1}
@@ -133,7 +131,7 @@ type abc_population_type_old # Deprecated, but kept for now, in case need to rea
    end
 end
 
-type abc_population_type
+mutable struct abc_population_type
    theta::Array{Float64,2}
    weights::Array{Float64,1}
    dist::Array{Float64,1}
