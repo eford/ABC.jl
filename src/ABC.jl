@@ -14,6 +14,8 @@ else
   #import Base: sum, mean, std
   import Compat: sum, mean, std
   import Base: median, maximum, minimum, quantile, var, cov, cor
+  using Compat.Statistics
+  using Compat.Distributed
 end
 
 export
@@ -33,8 +35,6 @@ export
 
 import StatsBase.sample
 import Base: rand
-#import Compat.String
-#import Compat: UTF8String, ASCIIString, readstring, is_windows
 import Compat: @compat
 
 # until added to distributions, use our own

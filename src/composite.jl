@@ -5,14 +5,18 @@
 module CompositeDistributions
 
 using Compat
-if !@isdefined  Distributions
-   using Distributions 
-end
-#if !@isdefined  Statistics
-#   using Statistics
-#end
 
-import Base.length, Statistics.mean, Base.show
+if VERSION >= v"0.7"
+  using Statistics
+  using Distributed
+  import Statistics: mean, median, maximum, minimum, quantile, std, var, cov, cor
+else
+  using Compat.Statistics
+  using Compat.Distributed
+  import Base: mean, median, maximum, minimum, quantile, std, var, cov, cor
+end
+
+import Base.length, Base.show
 import Distributions.params
 import Distributions.mean, Distributions.mode, Distributions.var, Distributions.cov
 import Distributions.entropy, Distributions.insupport
