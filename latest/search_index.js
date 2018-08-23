@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "ABC.jl:  Approximate Bayesian Computing for Julia",
     "title": "API",
     "category": "section",
-    "text": "ABC\nABC.abc_pmc_plan_type(gd::Function,css::Function,cd::Function,p)\nABC.abc_population_type(num_param::Integer, num_particles::Integer)"
+    "text": "Modules = [ABC]\nPrivate = false\nOrder   = [:module, :function, :type]"
 },
 
 {
@@ -38,6 +38,30 @@ var documenterSearchIndex = {"docs": [
     "title": "Index",
     "category": "section",
     "text": ""
+},
+
+{
+    "location": "page1/#ABC",
+    "page": "-",
+    "title": "ABC",
+    "category": "module",
+    "text": "ABC Module providing     types (abc_pmc_plan_type, abc_population_type) and methods (generate_theta, init_abc, update_abc_pop, run_abc) for using Approximate Bayesian Computing\n\n\n\n"
+},
+
+{
+    "location": "page1/#ABC.abc_population_type-Tuple{Integer,Integer}",
+    "page": "-",
+    "title": "ABC.abc_population_type",
+    "category": "method",
+    "text": "abc_population_type(num_param::Integer, num_particles::Integer; accept_log::abc_log_type = abc_log_type(), reject_log::abc_log_type = abc_log_type(), repeats::Array{Int64,1} = zeros(Int64,num_particles) )\n\nnum_param:  Number of model parameters for generating simulated data num_particles: Number of particles for sequential importance sampler\n\nOptional parameters: accept_log: Log of accepted parameters/summary statistics/distances reject_log: Log of rejected parameters/summary statistics/distances repeats:    Array indicating which particles have been repeated from previous generation\n\n\n\n"
+},
+
+{
+    "location": "page1/#",
+    "page": "-",
+    "title": "-",
+    "category": "page",
+    "text": "ABCabc_pmc_plan_type(gd::Function,css::Function,cd::Function,p)ABC.abc_population_type(num_param::Integer, num_particles::Integer)"
 },
 
 ]}
