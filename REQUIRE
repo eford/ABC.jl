@@ -6,8 +6,5 @@ Distances
 DistributedArrays
 StatsBase
 MultivariateStats
-# New requirements for 0.7
-Statistics
-Distributed
 
 
